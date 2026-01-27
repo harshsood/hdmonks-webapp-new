@@ -1,0 +1,421 @@
+from fastapi import FastAPI, APIRouter, HTTPException, Query
+from dotenv import load_dotenv
+from starlette.middleware.cors import CORSMiddleware
+import os
+import logging
+from pathlib import Path
+from typing import List, Optional
+from datetime import datetime
+
+from models import (
+    Stage, Service, ContactInquiry, TimeSlot, ConsultationBooking,
+    ServiceCreate, ServiceUpdate, StageCreate, StageUpdate,
+    ContactInquiryCreate, TimeSlotCreate, ConsultationBookingCreate
+)
+from database import database
+from email_service import email_service
+from admin_routes import admin_router
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+# Create the main app
+app = FastAPI(title="HD MONKS API", version="1.0.0")
+
+# Create a router with the /api prefix
+api_router = APIRouter(prefix="/api")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+# ===== PUBLIC ROUTES =====
+
+@api_router.get("/")
+async def root():
+    """Health check endpoint"""
+    return {"message": "HD MONKS API is running", "status": "healthy"}
+
+
+@api_router.get("/stages")
+async def get_stages():
+    """Get all stages with services"""
+    try:
+        stages = await database.get_all_stages()
+        return {"success": True, "data": stages}
+    except Exception as e:
+        logger.error(f"Error fetching stages: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/stages/{stage_id}")
+async def get_stage(stage_id: int):
+    """Get a specific stage by ID"""
+    try:
+        stage = await database.get_stage_by_id(stage_id)
+        if not stage:
+            raise HTTPException(status_code=404, detail="Stage not found")
+        return {"success": True, "data": stage}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching stage: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/services/{service_id}")
+async def get_service(service_id: str):
+    """Get a specific service by service_id"""
+    try:
+        service = await database.get_service_by_service_id(service_id)
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found")
+        return {"success": True, "data": service}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching service: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/contact")
+async def submit_contact_inquiry(inquiry: ContactInquiryCreate):
+    """Submit a contact inquiry"""
+    try:
+        inquiry_obj = ContactInquiry(**inquiry.dict())
+        inquiry_data = inquiry_obj.dict()
+        
+        # Save to database
+        created_inquiry = await database.create_contact_inquiry(inquiry_data)
+        
+        # Send email notification
+        email_service.send_contact_inquiry_notification(created_inquiry)
+        
+        logger.info(f"Contact inquiry created: {created_inquiry['id']}")
+        return {
+            "success": True,
+            "message": "Thank you for your inquiry! We will get back to you soon.",
+            "data": created_inquiry
+        }
+    except Exception as e:
+        logger.error(f"Error creating contact inquiry: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/timeslots")
+async def get_available_timeslots(date: Optional[str] = Query(None)):
+    """Get available time slots"""
+    try:
+        timeslots = await database.get_available_timeslots(date)
+        return {"success": True, "data": timeslots}
+    except Exception as e:
+        logger.error(f"Error fetching timeslots: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/settings")
+async def get_settings():
+    """Get site settings"""
+    try:
+        settings = await database.get_settings()
+        return {"success": True, "data": settings}
+    except Exception as e:
+        logger.error(f"Error fetching settings: {str(e)}")
+        # Return default settings if not found
+        return {
+            "success": True,
+            "data": {
+                "company_name": "HD MONKS",
+                "site_title": "HD MONKS - Business Solutions",
+                "site_description": "End-to-end business solutions from startup to IPO",
+                "company_logo_url": "https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png",
+                "company_email": "contact@hdmonks.com",
+                "company_phone": "+91 XXX XXX XXXX"
+            }
+        }
+
+
+@api_router.post("/booking")
+async def book_consultation(booking: ConsultationBookingCreate):
+    """Book a consultation"""
+    try:
+        # Check if timeslot is available
+        timeslot = await database.get_timeslot_by_id(booking.timeslot_id)
+        if not timeslot:
+            raise HTTPException(status_code=404, detail="Time slot not found")
+        if not timeslot.get('is_available'):
+            raise HTTPException(status_code=400, detail="Time slot is no longer available")
+        
+        # Create booking
+        booking_obj = ConsultationBooking(
+            **booking.dict(),
+            date=timeslot['date'],
+            time=timeslot['time']
+        )
+        booking_data = booking_obj.dict()
+        
+        created_booking = await database.create_booking(booking_data)
+        
+        # Mark timeslot as unavailable
+        await database.mark_timeslot_unavailable(booking.timeslot_id)
+        
+        # Send confirmation emails
+        email_service.send_booking_confirmation(created_booking)
+        
+        logger.info(f"Consultation booked: {created_booking['id']}")
+        return {
+            "success": True,
+            "message": "Consultation booked successfully! You will receive a confirmation email shortly.",
+            "data": created_booking
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error booking consultation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== ADMIN ROUTES (CRUD OPERATIONS) =====
+
+@api_router.post("/admin/stages")
+async def create_stage(stage: StageCreate):
+    """Create a new stage (Admin)"""
+    try:
+        stage_obj = Stage(
+            id=stage.id,
+            title=stage.title,
+            subtitle=stage.subtitle,
+            phase=stage.phase,
+            services=[Service(**s.dict()) for s in stage.services]
+        )
+        stage_data = stage_obj.dict()
+        
+        created_stage = await database.create_stage(stage_data)
+        logger.info(f"Stage created: {created_stage['id']}")
+        return {"success": True, "data": created_stage}
+    except Exception as e:
+        logger.error(f"Error creating stage: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/admin/stages/{stage_id}")
+async def update_stage(stage_id: int, stage_update: StageUpdate):
+    """Update a stage (Admin)"""
+    try:
+        update_data = {k: v for k, v in stage_update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+        
+        update_data['updated_at'] = datetime.utcnow()
+        success = await database.update_stage(stage_id, update_data)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Stage not found")
+        
+        logger.info(f"Stage updated: {stage_id}")
+        return {"success": True, "message": "Stage updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating stage: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/admin/stages/{stage_id}")
+async def delete_stage(stage_id: int):
+    """Delete a stage (Admin)"""
+    try:
+        success = await database.delete_stage(stage_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Stage not found")
+        
+        logger.info(f"Stage deleted: {stage_id}")
+        return {"success": True, "message": "Stage deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting stage: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/stages/{stage_id}/services")
+async def add_service(stage_id: int, service: ServiceCreate):
+    """Add a service to a stage (Admin)"""
+    try:
+        service_obj = Service(**service.dict())
+        service_data = service_obj.dict()
+        
+        success = await database.add_service_to_stage(stage_id, service_data)
+        if not success:
+            raise HTTPException(status_code=404, detail="Stage not found")
+        
+        logger.info(f"Service added to stage {stage_id}: {service_data['service_id']}")
+        return {"success": True, "message": "Service added successfully", "data": service_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding service: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/admin/stages/{stage_id}/services/{service_id}")
+async def update_service(stage_id: int, service_id: str, service_update: ServiceUpdate):
+    """Update a service in a stage (Admin)"""
+    try:
+        update_data = {k: v for k, v in service_update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+        
+        update_data['updated_at'] = datetime.utcnow()
+        success = await database.update_service_in_stage(stage_id, service_id, update_data)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Service not found")
+        
+        logger.info(f"Service updated: {service_id} in stage {stage_id}")
+        return {"success": True, "message": "Service updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating service: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/admin/stages/{stage_id}/services/{service_id}")
+async def delete_service(stage_id: int, service_id: str):
+    """Delete a service from a stage (Admin)"""
+    try:
+        success = await database.delete_service_from_stage(stage_id, service_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Service not found")
+        
+        logger.info(f"Service deleted: {service_id} from stage {stage_id}")
+        return {"success": True, "message": "Service deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting service: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/inquiries")
+async def get_all_inquiries(skip: int = 0, limit: int = 100):
+    """Get all contact inquiries (Admin)"""
+    try:
+        inquiries = await database.get_all_inquiries(skip, limit)
+        return {"success": True, "data": inquiries}
+    except Exception as e:
+        logger.error(f"Error fetching inquiries: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/admin/inquiries/{inquiry_id}/status")
+async def update_inquiry_status(inquiry_id: str, status: str):
+    """Update inquiry status (Admin)"""
+    try:
+        success = await database.update_inquiry_status(inquiry_id, status)
+        if not success:
+            raise HTTPException(status_code=404, detail="Inquiry not found")
+        
+        logger.info(f"Inquiry status updated: {inquiry_id} -> {status}")
+        return {"success": True, "message": "Inquiry status updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating inquiry status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/timeslots")
+async def create_timeslot(timeslot: TimeSlotCreate):
+    """Create a new time slot (Admin)"""
+    try:
+        timeslot_obj = TimeSlot(**timeslot.dict())
+        timeslot_data = timeslot_obj.dict()
+        
+        created_timeslot = await database.create_timeslot(timeslot_data)
+        logger.info(f"Timeslot created: {created_timeslot['id']}")
+        return {"success": True, "data": created_timeslot}
+    except Exception as e:
+        logger.error(f"Error creating timeslot: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/admin/timeslots/{timeslot_id}")
+async def delete_timeslot(timeslot_id: str):
+    """Delete a time slot (Admin)"""
+    try:
+        success = await database.delete_timeslot(timeslot_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Timeslot not found")
+        
+        logger.info(f"Timeslot deleted: {timeslot_id}")
+        return {"success": True, "message": "Timeslot deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting timeslot: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/bookings")
+async def get_all_bookings(skip: int = 0, limit: int = 100):
+    """Get all consultation bookings (Admin)"""
+    try:
+        bookings = await database.get_all_bookings(skip, limit)
+        return {"success": True, "data": bookings}
+    except Exception as e:
+        logger.error(f"Error fetching bookings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/admin/bookings/{booking_id}/status")
+async def update_booking_status(booking_id: str, status: str):
+    """Update booking status (Admin)"""
+    try:
+        success = await database.update_booking_status(booking_id, status)
+        if not success:
+            raise HTTPException(status_code=404, detail="Booking not found")
+        
+        logger.info(f"Booking status updated: {booking_id} -> {status}")
+        return {"success": True, "message": "Booking status updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating booking status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Include the router in the main app
+app.include_router(api_router)
+app.include_router(admin_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    await database.close()
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+
+    port = int(os.environ.get("PORT", 10000))
+
+    uvicorn.run(
+        "server:app",
+        host="0.0.0.0",
+        port=port,
+        log_level="info"
+    )
