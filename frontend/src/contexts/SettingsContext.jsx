@@ -20,7 +20,7 @@ export const SettingsProvider = ({ children }) => {
     site_title: 'HD MONKS - Business Solutions',
     site_description: 'End-to-end business solutions from startup to IPO',
     company_logo_url: 'https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png',
-    favicon_url: '',
+    favicon_url: 'https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png',
     company_email: 'contact@hdmonks.com',
     company_phone: '+91 XXX XXX XXXX',
     company_address: '',
