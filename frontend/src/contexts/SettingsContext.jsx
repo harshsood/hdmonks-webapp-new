@@ -55,11 +55,16 @@ export const SettingsProvider = ({ children }) => {
         }
         
         // Update favicon (use favicon_url which may be fallback to logo)
+        // Add cache-busting query parameter
         if (settingsData.favicon_url) {
+          // Remove all existing icon links
+          document.querySelectorAll('link[rel="icon"]').forEach(link => {
+            if (link.id !== 'dynamic-favicon') {
+              link.remove();
+            }
+          });
+          
           let link = document.getElementById('dynamic-favicon');
-          if (!link) {
-            link = document.querySelector('link[rel="icon"]');
-          }
           if (!link) {
             link = document.createElement('link');
             link.rel = 'icon';
@@ -67,7 +72,12 @@ export const SettingsProvider = ({ children }) => {
             link.type = 'image/png';
             document.head.appendChild(link);
           }
-          link.href = settingsData.favicon_url;
+          
+          // Add timestamp to bust cache
+          const cachebustedUrl = settingsData.favicon_url.includes('?') 
+            ? `${settingsData.favicon_url}&t=${Date.now()}`
+            : `${settingsData.favicon_url}?t=${Date.now()}`;
+          link.href = cachebustedUrl;
         }
       }
     } catch (error) {
