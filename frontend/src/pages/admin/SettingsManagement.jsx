@@ -17,7 +17,7 @@ const SettingsManagement = () => {
     site_title: 'HD MONKS - Business Solutions',
     site_description: 'End-to-end business solutions from startup to IPO',
     company_logo_url: 'https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png',
-    favicon_url: '',
+    favicon_url: 'https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png',
     smtp_host: '',
     smtp_port: 587,
     smtp_user: '',
@@ -52,6 +52,34 @@ const SettingsManagement = () => {
       toast.success('Settings saved successfully');
     } catch (error) {
       toast.error('Failed to save settings');
+    }
+  };
+
+  const handleImageUpload = async (e, type) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const token = localStorage.getItem('admin_token');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/admin/upload-image`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data.success) {
+        setSettings({
+          ...settings,
+          [type]: response.data.data_url
+        });
+        toast.success(`${type === 'company_logo_url' ? 'Logo' : 'Favicon'} uploaded successfully`);
+      }
+    } catch (error) {
+      toast.error(`Failed to upload ${type === 'company_logo_url' ? 'logo' : 'favicon'}`);
     }
   };
 
@@ -103,13 +131,35 @@ const SettingsManagement = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Company Logo URL</label>
-              <input
-                type="url"
-                value={settings.company_logo_url}
-                onChange={e => setSettings({...settings, company_logo_url: e.target.value})}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                placeholder="https://example.com/logo.png"
-              />
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={settings.company_logo_url}
+                  onChange={e => setSettings({...settings, company_logo_url: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                  placeholder="https://example.com/logo.png"
+                />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => handleImageUpload(e, 'company_logo_url')}
+                    className="hidden"
+                    id="logo-upload"
+                  />
+                  <label htmlFor="logo-upload">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full cursor-pointer"
+                      onClick={() => document.getElementById('logo-upload')?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Or Upload Logo
+                    </Button>
+                  </label>
+                </div>
+              </div>
               {settings.company_logo_url && (
                 <div className="mt-2 p-2 bg-gray-100 rounded">
                   <img src={settings.company_logo_url} alt="Logo preview" className="h-12 object-contain" />
@@ -118,14 +168,41 @@ const SettingsManagement = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Favicon URL</label>
-              <input
-                type="url"
-                value={settings.favicon_url}
-                onChange={e => setSettings({...settings, favicon_url: e.target.value})}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                placeholder="https://example.com/favicon.ico"
-              />
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={settings.favicon_url}
+                  onChange={e => setSettings({...settings, favicon_url: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                  placeholder="https://example.com/favicon.ico"
+                />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => handleImageUpload(e, 'favicon_url')}
+                    className="hidden"
+                    id="favicon-upload"
+                  />
+                  <label htmlFor="favicon-upload">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full cursor-pointer"
+                      onClick={() => document.getElementById('favicon-upload')?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Or Upload Favicon
+                    </Button>
+                  </label>
+                </div>
+              </div>
               <p className="text-xs text-gray-500 mt-1">Browser tab icon (16x16 or 32x32 pixels)</p>
+              {settings.favicon_url && (
+                <div className="mt-2 p-2 bg-gray-100 rounded">
+                  <img src={settings.favicon_url} alt="Favicon preview" className="h-8 w-8 object-contain" />
+                </div>
+              )}
             </div>
           </div>
         )}

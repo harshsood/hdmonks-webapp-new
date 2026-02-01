@@ -1,9 +1,11 @@
 """
 Admin panel API routes
 """
-from fastapi import APIRouter, HTTPException, Header, Query, Depends
+from fastapi import APIRouter, HTTPException, Header, Query, Depends, UploadFile, File
 from typing import List, Optional
 from datetime import datetime
+import base64
+import io
 
 from models import (
     AdminLogin, Blog, BlogCreate, BlogUpdate,
@@ -598,4 +600,40 @@ async def get_analytics_admin(
         raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format (YYYY-MM-DD)")
     except Exception as e:
         logger.error(f"Error fetching analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== IMAGE UPLOAD =====
+
+@admin_router.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    session: dict = Depends(verify_admin_token)
+):
+    """Upload an image and return base64 data URL"""
+    try:
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="Only JPEG, PNG, GIF, and WebP images are allowed")
+        
+        # Validate file size (max 5MB)
+        content = await file.read()
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+        
+        # Convert to base64 data URL
+        base64_str = base64.b64encode(content).decode('utf-8')
+        data_url = f"data:{file.content_type};base64,{base64_str}"
+        
+        logger.info(f"Image uploaded: {file.filename}")
+        return {
+            "success": True,
+            "data_url": data_url,
+            "message": f"Image {file.filename} uploaded successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading image: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -308,8 +308,8 @@ class Settings(BaseModel):
     company_address: str = "Your Business Address"
     site_title: str = "HD MONKS - Business Solutions"
     site_description: str = "End-to-end business solutions from startup to IPO"
-    company_logo_url: Optional[str] = None
-    favicon_url: Optional[str] = None
+    company_logo_url: Optional[str] = "https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png"
+    favicon_url: Optional[str] = "https://customer-assets.emergentagent.com/job_bizlaunch-guide-1/artifacts/7w27dsce_HD%20Monks%20%282%29.png"
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_user: Optional[str] = None
