@@ -303,9 +303,13 @@ class TemplateUpdate(BaseModel):
 class Settings(BaseModel):
     id: str = "settings"
     company_name: str = "HD MONKS"
-    company_email: str = "contact@hdmonks.com"
-    company_phone: str = "+91 XXX XXX XXXX"
+    company_email: str = "hdmonkslegal@gmail.com"
+    company_phone: str = "+91-7045861090, +91-7011340279"
     company_address: str = "Your Business Address"
+    site_title: str = "HD MONKS - Business Solutions"
+    site_description: str = "End-to-end business solutions from startup to IPO"
+    company_logo_url: Optional[str] = None
+    favicon_url: Optional[str] = None
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_user: Optional[str] = None
@@ -320,6 +324,10 @@ class SettingsUpdate(BaseModel):
     company_email: Optional[str] = None
     company_phone: Optional[str] = None
     company_address: Optional[str] = None
+    site_title: Optional[str] = None
+    site_description: Optional[str] = None
+    company_logo_url: Optional[str] = None
+    favicon_url: Optional[str] = None
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_user: Optional[str] = None

@@ -12,7 +12,7 @@ const SettingsManagement = () => {
   const [settings, setSettings] = useState({
     company_name: 'HD MONKS',
     company_email: '',
-    company_phone: '',
+    company_phone: '+91-7045861090, +91-7011340279',
     company_address: '',
     site_title: 'HD MONKS - Business Solutions',
     site_description: 'End-to-end business solutions from startup to IPO',
