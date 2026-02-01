@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { useSettings } from '../contexts/SettingsContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -61,6 +62,7 @@ const ServiceDetail = () => {
   const navigate = useNavigate();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSettings();
 
   const fetchService = useCallback(async () => {
     try {
@@ -246,7 +248,7 @@ const ServiceDetail = () => {
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <p className="text-sm text-gray-600 mb-2">Need help deciding?</p>
                   <p className="text-sm font-medium text-gray-900">Call us at:</p>
-                  <p className="text-lg font-bold text-orange-500">+91 XXX XXX XXXX</p>
+                  <p className="text-lg font-bold text-orange-500">{settings.company_phone || '+91-7045861090, +91-7011340279'}</p>
                 </div>
               </Card>
             </div>
