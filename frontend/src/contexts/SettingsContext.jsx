@@ -57,27 +57,45 @@ export const SettingsProvider = ({ children }) => {
         // Update favicon (use favicon_url which may be fallback to logo)
         // Add cache-busting query parameter
         if (settingsData.favicon_url) {
-          // Remove all existing icon links
+          // Remove all existing icon links except our dynamic ones
           document.querySelectorAll('link[rel="icon"]').forEach(link => {
             if (link.id !== 'dynamic-favicon') {
               link.remove();
             }
           });
+          document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(link => {
+            if (link.id !== 'dynamic-apple-icon') {
+              link.remove();
+            }
+          });
           
+          // Add timestamp to bust cache
+          const cachebustedUrl = settingsData.favicon_url.includes('?') 
+            ? `${settingsData.favicon_url}&t=${Date.now()}`
+            : `${settingsData.favicon_url}?t=${Date.now()}`;
+          
+          // Update favicon link
           let link = document.getElementById('dynamic-favicon');
           if (!link) {
             link = document.createElement('link');
             link.rel = 'icon';
             link.id = 'dynamic-favicon';
             link.type = 'image/png';
+            link.sizes = '32x32';
             document.head.appendChild(link);
           }
-          
-          // Add timestamp to bust cache
-          const cachebustedUrl = settingsData.favicon_url.includes('?') 
-            ? `${settingsData.favicon_url}&t=${Date.now()}`
-            : `${settingsData.favicon_url}?t=${Date.now()}`;
           link.href = cachebustedUrl;
+          
+          // Update apple touch icon
+          let appleLink = document.getElementById('dynamic-apple-icon');
+          if (!appleLink) {
+            appleLink = document.createElement('link');
+            appleLink.rel = 'apple-touch-icon';
+            appleLink.id = 'dynamic-apple-icon';
+            appleLink.sizes = '180x180';
+            document.head.appendChild(appleLink);
+          }
+          appleLink.href = cachebustedUrl;
         }
       }
     } catch (error) {
