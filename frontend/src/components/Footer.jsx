@@ -12,11 +12,17 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
-            <img
-              src={settings.company_logo_url}
-              alt={settings.company_name}
-              className="h-12 w-auto mb-4 brightness-0 invert"
-            />
+            {settings.company_logo_url ? (
+              <img
+                src={settings.company_logo_url}
+                alt={settings.company_name}
+                className="h-12 w-auto mb-4"
+              />
+            ) : (
+              <div className="h-12 mb-4 bg-orange-500 text-white px-3 py-2 rounded font-bold flex items-center">
+                {settings.company_name}
+              </div>
+            )}
             <p className="text-sm text-gray-400 mb-4">
               {settings.company_name} - {settings.site_description}
             </p>

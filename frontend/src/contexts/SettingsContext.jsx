@@ -56,10 +56,15 @@ export const SettingsProvider = ({ children }) => {
         
         // Update favicon (use favicon_url which may be fallback to logo)
         if (settingsData.favicon_url) {
-          let link = document.querySelector('link[rel="icon"]');
+          let link = document.getElementById('dynamic-favicon');
+          if (!link) {
+            link = document.querySelector('link[rel="icon"]');
+          }
           if (!link) {
             link = document.createElement('link');
             link.rel = 'icon';
+            link.id = 'dynamic-favicon';
+            link.type = 'image/png';
             document.head.appendChild(link);
           }
           link.href = settingsData.favicon_url;
