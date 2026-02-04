@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -41,6 +41,19 @@ logger = logging.getLogger(__name__)
 async def root():
     """Health check endpoint"""
     return {"message": "HD MONKS API is running", "status": "healthy"}
+
+
+@api_router.get("/health")
+async def health_check():
+    """Simple health endpoint to verify server is up without DB access"""
+    return {"success": True, "message": "ok"}
+
+
+@api_router.get("/debug/origin")
+async def debug_origin(request: Request):
+    """Echo the Origin header for debugging CORS behavior."""
+    origin = request.headers.get("origin")
+    return {"success": True, "origin": origin}
 
 
 @api_router.get("/stages")
