@@ -490,6 +490,7 @@ else:
 
 logger.info(f"CORS allowed origins: {allow_origins}")
 
+# Add middleware BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -511,7 +512,7 @@ async def log_origin(request, call_next):
         logger.exception(f"Unhandled exception processing request {request.url.path}: {str(e)}")
         return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
 
-# Include the router in the main app
+# Include the router in the main app (AFTER middleware is configured)
 app.include_router(api_router)
 app.include_router(admin_router)
 
