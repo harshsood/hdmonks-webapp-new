@@ -463,10 +463,6 @@ async def update_booking_status(booking_id: str, status: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Include the router in the main app
-app.include_router(api_router)
-app.include_router(admin_router)
-
 # Configure CORS origins via environment to avoid wildcard with credentials
 _allowed_origins = os.environ.get("ALLOWED_ORIGINS")
 if _allowed_origins:
@@ -479,6 +475,8 @@ else:
         "http://localhost:3000",
     ]
 
+logger.info(f"CORS allowed origins: {allow_origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -486,6 +484,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the router in the main app
+app.include_router(api_router)
+app.include_router(admin_router)
 
 
 @app.on_event("startup")
