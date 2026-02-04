@@ -35,6 +35,19 @@ The `vercel.json` file at the root includes:
    - Go to **Deployments** tab
    - Click the latest deployment → **Redeploy**
 
+## Backend Environment Variables (Render)
+
+Make sure the following environment variables are set for the backend service on Render:
+
+- `REACT_APP_BACKEND_URL` is set in Vercel (frontend) to point to the backend.
+- `ALLOWED_ORIGINS` (important): a comma-separated list of allowed origins for CORS, e.g.
+
+```
+ALLOWED_ORIGINS=https://www.hdmonks.com,https://hdmonks.com
+```
+
+Set `ALLOWED_ORIGINS` in your Render dashboard under the service's environment variables and redeploy the backend so the CORS header is returned correctly to the frontend.
+
 ### 🌐 Live URLs
 - **Frontend Home**: https://hd-monks-web-app-git-copilot-vscode-f0e44d-harshsoods-projects.vercel.app
 - **Admin Login**: https://hd-monks-web-app-git-copilot-vscode-f0e44d-harshsoods-projects.vercel.app/admin/login
