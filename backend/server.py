@@ -166,12 +166,11 @@ async def book_consultation(booking: ConsultationBookingCreate):
         if not timeslot.get('is_available'):
             raise HTTPException(status_code=400, detail="Time slot is no longer available")
         
-        # Create booking
-        booking_obj = ConsultationBooking(
-            **booking.dict(),
-            date=timeslot['date'],
-            time=timeslot['time']
-        )
+        # Create booking with full_name mapped from form
+        booking_dict = booking.dict()
+        booking_dict['date'] = timeslot['date']
+        booking_dict['time'] = timeslot['time']
+        booking_obj = ConsultationBooking(**booking_dict)
         booking_data = booking_obj.dict()
         
         created_booking = await database.create_booking(booking_data)

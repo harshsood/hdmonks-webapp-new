@@ -72,7 +72,7 @@ const Home = () => {
   const fetchStages = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/stages`);
+      const response = await axios.get(`${API}/stages?t=${Date.now()}`);
       if (response.data.success) {
         setStages(response.data.data);
       }

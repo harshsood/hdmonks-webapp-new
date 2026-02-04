@@ -32,7 +32,7 @@ const BookingCalendar = ({ isOpen, onClose }) => {
   const fetchTimeslots = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/timeslots`);
+      const response = await axios.get(`${API}/timeslots?t=${Date.now()}`);
       if (response.data.success) {
         setTimeslots(response.data.data);
       }

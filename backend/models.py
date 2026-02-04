@@ -108,7 +108,7 @@ class TimeSlotCreate(BaseModel):
 
 class ConsultationBooking(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
+    full_name: str
     email: str
     phone: str
     company: Optional[str] = None
