@@ -46,6 +46,18 @@ class Database:
             return data.isoformat()
         return data
     
+    def _sanitize_service(self, service: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure service has required fields with valid data"""
+        if not isinstance(service.get('relevant_for'), list):
+            service['relevant_for'] = ['startup', 'msme']
+        return service
+    
+    def _sanitize_stage(self, stage: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure all services in stage have required fields"""
+        if 'services' in stage and isinstance(stage['services'], list):
+            stage['services'] = [self._sanitize_service(s) for s in stage['services']]
+        return stage
+    
     # ===== STAGE OPERATIONS =====
     
     async def get_all_stages(self) -> List[Dict[str, Any]]:
@@ -55,6 +67,10 @@ class Database:
         
         cursor = self.db.stages.find({}, {"_id": 0}).sort("id", 1)
         stages = await cursor.to_list(length=None)
+        
+        # Sanitize all stages to ensure services have required fields
+        stages = [self._sanitize_stage(stage) for stage in stages]
+        
         return stages
     
     async def get_stage_by_id(self, stage_id: int) -> Optional[Dict[str, Any]]:
@@ -63,6 +79,11 @@ class Database:
             await self.connect()
         
         stage = await self.db.stages.find_one({"id": stage_id}, {"_id": 0})
+        
+        # Sanitize stage to ensure services have required fields
+        if stage:
+            stage = self._sanitize_stage(stage)
+        
         return stage
     
     async def create_stage(self, stage_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -110,7 +131,9 @@ class Database:
         )
         
         if stage and "services" in stage and len(stage["services"]) > 0:
-            return stage["services"][0]
+            service = stage["services"][0]
+            # Sanitize to ensure required fields
+            return self._sanitize_service(service)
         return None
     
     async def add_service_to_stage(self, stage_id: int, service_data: Dict[str, Any]) -> bool:

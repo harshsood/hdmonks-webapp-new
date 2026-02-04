@@ -260,9 +260,17 @@ async def add_service(stage_id: int, service: ServiceCreate):
         if not service_data.get('service_id'):
             service_data['service_id'] = str(uuid.uuid4())
         
+        # Ensure relevant_for is always a list
+        if not service_data.get('relevant_for'):
+            service_data['relevant_for'] = ['startup', 'msme']
+        elif not isinstance(service_data['relevant_for'], list):
+            service_data['relevant_for'] = list(service_data['relevant_for']) if service_data['relevant_for'] else ['startup', 'msme']
+        
         # Add timestamps
         service_data['created_at'] = datetime.utcnow().isoformat()
         service_data['updated_at'] = datetime.utcnow().isoformat()
+        
+        logger.info(f"Adding service to stage {stage_id}: {service_data}")
         
         success = await database.add_service_to_stage(stage_id, service_data)
         if not success:
@@ -289,7 +297,14 @@ async def update_service(stage_id: int, service_id: str, service_update: Service
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
+        # Ensure relevant_for is always a list if provided
+        if 'relevant_for' in update_data:
+            if not isinstance(update_data['relevant_for'], list):
+                update_data['relevant_for'] = list(update_data['relevant_for']) if update_data['relevant_for'] else ['startup', 'msme']
+        
         update_data['updated_at'] = datetime.utcnow().isoformat()
+        logger.info(f"Updating service {service_id} in stage {stage_id}: {update_data}")
+        
         success = await database.update_service_in_stage(stage_id, service_id, update_data)
         
         if not success:

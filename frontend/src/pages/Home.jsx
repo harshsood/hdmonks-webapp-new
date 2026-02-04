@@ -86,9 +86,14 @@ const Home = () => {
 
   const filteredStages = stages.map(stage => ({
     ...stage,
-    services: stage.services.filter(service =>
-      service.relevant_for.includes(businessType)
-    )
+    services: stage.services.filter(service => {
+      // Handle missing or invalid relevant_for field
+      if (!service.relevant_for || !Array.isArray(service.relevant_for)) {
+        console.warn('Service missing valid relevant_for field:', service);
+        return false; // Hide services with invalid data
+      }
+      return service.relevant_for.includes(businessType);
+    })
   }));
 
   const progressPercentage = businessType === 'startup' ? 20 : 75;
