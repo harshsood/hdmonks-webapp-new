@@ -101,7 +101,15 @@ async def get_service(service_id: str):
 async def submit_contact_inquiry(inquiry: ContactInquiryCreate):
     """Submit a contact inquiry"""
     try:
-        inquiry_obj = ContactInquiry(**inquiry.dict())
+        # Normalize legacy `name` -> `full_name`
+        inquiry_payload = inquiry.dict()
+        if not inquiry_payload.get('full_name') and inquiry_payload.get('name'):
+            inquiry_payload['full_name'] = inquiry_payload.get('name')
+
+        if not inquiry_payload.get('full_name'):
+            raise HTTPException(status_code=400, detail="Missing full_name")
+
+        inquiry_obj = ContactInquiry(**inquiry_payload)
         inquiry_data = inquiry_obj.dict()
         
         # Save to database
@@ -116,6 +124,8 @@ async def submit_contact_inquiry(inquiry: ContactInquiryCreate):
             "message": "Thank you for your inquiry! We will get back to you soon.",
             "data": created_inquiry
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating contact inquiry: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

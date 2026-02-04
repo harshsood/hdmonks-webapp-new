@@ -83,7 +83,9 @@ class ContactInquiry(BaseModel):
 
 
 class ContactInquiryCreate(BaseModel):
-    full_name: str
+    full_name: Optional[str] = None
+    # legacy support for older clients
+    name: Optional[str] = None
     email: str
     phone: Optional[str] = None
     company: Optional[str] = None
@@ -123,7 +125,9 @@ class ConsultationBooking(BaseModel):
 
 
 class ConsultationBookingCreate(BaseModel):
-    full_name: str
+    full_name: Optional[str] = None
+    # legacy support for older clients
+    name: Optional[str] = None
     email: EmailStr
     phone: str
     business_type: str
