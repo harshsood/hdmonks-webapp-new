@@ -467,10 +467,22 @@ async def update_booking_status(booking_id: str, status: str):
 app.include_router(api_router)
 app.include_router(admin_router)
 
+# Configure CORS origins via environment to avoid wildcard with credentials
+_allowed_origins = os.environ.get("ALLOWED_ORIGINS")
+if _allowed_origins:
+    allow_origins = [o.strip() for o in _allowed_origins.split(",") if o.strip()]
+else:
+    # default to known frontend domains and localhost for testing
+    allow_origins = [
+        "https://www.hdmonks.com",
+        "https://hdmonks.com",
+        "http://localhost:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
