@@ -386,6 +386,38 @@ async def create_timeslot(timeslot: TimeSlotCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.put("/admin/timeslots/{timeslot_id}")
+async def update_timeslot(timeslot_id: str, timeslot_update: dict):
+    """Update a time slot (Admin)"""
+    try:
+        # Update only provided fields
+        update_data = {k: v for k, v in timeslot_update.items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+        
+        update_data['updated_at'] = datetime.utcnow().isoformat()
+        
+        # Update in database
+        success = await database.update_timeslot(timeslot_id, update_data)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Timeslot not found")
+        
+        # Fetch and return the updated timeslot
+        updated_timeslot = await database.get_timeslot_by_id(timeslot_id)
+        logger.info(f"Timeslot updated: {timeslot_id}")
+        return {
+            "success": True,
+            "message": "Timeslot updated successfully",
+            "data": updated_timeslot
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating timeslot: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.delete("/admin/timeslots/{timeslot_id}")
 async def delete_timeslot(timeslot_id: str):
     """Delete a time slot (Admin)"""

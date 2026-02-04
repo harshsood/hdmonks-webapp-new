@@ -262,6 +262,19 @@ class Database:
         result = await self.db.timeslots.delete_one({"id": timeslot_id})
         return result.deleted_count > 0
     
+    async def update_timeslot(self, timeslot_id: str, update_data: Dict[str, Any]) -> bool:
+        """Update a time slot"""
+        if self.db is None:
+            await self.connect()
+        
+        update_data = self._serialize_datetime(update_data)
+        
+        result = await self.db.timeslots.update_one(
+            {"id": timeslot_id},
+            {"$set": update_data}
+        )
+        return result.modified_count > 0
+    
     # ===== BOOKING OPERATIONS =====
     
     async def create_booking(self, booking_data: Dict[str, Any]) -> Dict[str, Any]:

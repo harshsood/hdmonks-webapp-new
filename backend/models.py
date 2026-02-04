@@ -71,7 +71,7 @@ class StageUpdate(BaseModel):
 
 class ContactInquiry(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
+    full_name: str
     email: str
     phone: Optional[str] = None
     company: Optional[str] = None
@@ -83,7 +83,7 @@ class ContactInquiry(BaseModel):
 
 
 class ContactInquiryCreate(BaseModel):
-    name: str
+    full_name: str
     email: str
     phone: Optional[str] = None
     company: Optional[str] = None
