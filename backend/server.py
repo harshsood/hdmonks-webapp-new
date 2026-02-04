@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
+import uuid
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
@@ -211,14 +212,20 @@ async def update_stage(stage_id: int, stage_update: StageUpdate):
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_stage(stage_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="Stage not found")
         
+        # Fetch and return the updated stage
+        updated_stage = await database.get_stage_by_id(stage_id)
         logger.info(f"Stage updated: {stage_id}")
-        return {"success": True, "message": "Stage updated successfully"}
+        return {
+            "success": True,
+            "message": "Stage updated successfully",
+            "data": updated_stage
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -247,15 +254,26 @@ async def delete_stage(stage_id: int):
 async def add_service(stage_id: int, service: ServiceCreate):
     """Add a service to a stage (Admin)"""
     try:
-        service_obj = Service(**service.dict())
-        service_data = service_obj.dict()
+        service_data = service.dict()
+        
+        # Generate service_id if not provided
+        if not service_data.get('service_id'):
+            service_data['service_id'] = str(uuid.uuid4())
+        
+        # Add timestamps
+        service_data['created_at'] = datetime.utcnow().isoformat()
+        service_data['updated_at'] = datetime.utcnow().isoformat()
         
         success = await database.add_service_to_stage(stage_id, service_data)
         if not success:
             raise HTTPException(status_code=404, detail="Stage not found")
         
         logger.info(f"Service added to stage {stage_id}: {service_data['service_id']}")
-        return {"success": True, "message": "Service added successfully", "data": service_data}
+        return {
+            "success": True,
+            "message": "Service added successfully",
+            "data": service_data
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -271,14 +289,21 @@ async def update_service(stage_id: int, service_id: str, service_update: Service
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_service_in_stage(stage_id, service_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="Service not found")
         
+        # Fetch and return the updated service
+        updated_service = await database.get_service_by_service_id(service_id)
+        
         logger.info(f"Service updated: {service_id} in stage {stage_id}")
-        return {"success": True, "message": "Service updated successfully"}
+        return {
+            "success": True,
+            "message": "Service updated successfully",
+            "data": updated_service
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -404,9 +429,25 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup_db_client():
+    """Initialize database connection on application startup"""
+    try:
+        await database.connect()
+        logger.info("Database connection initialized on startup")
+    except Exception as e:
+        logger.error(f"Failed to initialize database on startup: {str(e)}")
+        raise
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    await database.close()
+    """Close database connection on application shutdown"""
+    try:
+        await database.close()
+        logger.info("Database connection closed on shutdown")
+    except Exception as e:
+        logger.error(f"Error during database shutdown: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

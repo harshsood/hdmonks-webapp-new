@@ -8,8 +8,11 @@ import uuid
 
 class Service(BaseModel):
     service_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
+    name: str
     description: str
+    icon: Optional[str] = None
+    details: Optional[str] = None
+    relevant_for: List[str] = []
     price: Optional[str] = None
     duration: Optional[str] = None
     features: List[str] = []
@@ -18,16 +21,23 @@ class Service(BaseModel):
 
 
 class ServiceCreate(BaseModel):
-    title: str
+    service_id: Optional[str] = None
+    name: str
     description: str
+    icon: Optional[str] = None
+    details: Optional[str] = None
+    relevant_for: List[str] = []
     price: Optional[str] = None
     duration: Optional[str] = None
     features: List[str] = []
 
 
 class ServiceUpdate(BaseModel):
-    title: Optional[str] = None
+    name: Optional[str] = None
     description: Optional[str] = None
+    icon: Optional[str] = None
+    details: Optional[str] = None
+    relevant_for: Optional[List[str]] = None
     price: Optional[str] = None
     duration: Optional[str] = None
     features: Optional[List[str]] = None

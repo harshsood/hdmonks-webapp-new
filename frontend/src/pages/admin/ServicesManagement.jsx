@@ -34,14 +34,30 @@ const ServicesManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('admin_token');
+      
+      if (!token) {
+        toast.error('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
       const response = await axios.get(`${BACKEND_URL}/api/stages`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       if (response.data.success) {
         setStages(response.data.data);
+        console.log('Stages fetched successfully:', response.data.data);
+      } else {
+        throw new Error(response.data.message || 'Failed to load services');
       }
     } catch (error) {
-      toast.error('Failed to load services');
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'Failed to load services';
+      console.error('Error fetching stages:', error);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -58,27 +74,49 @@ const ServicesManagement = () => {
     try {
       const token = localStorage.getItem('admin_token');
       
+      if (!token) {
+        toast.error('Authentication token not found. Please log in again.');
+        return;
+      }
+      
       if (editingService) {
-        await axios.put(
+        const response = await axios.put(
           `${API}/stages/${selectedStageId}/services/${editingService.service_id}`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        toast.success('Service updated successfully');
+        
+        if (response.data.success) {
+          toast.success('Service updated successfully');
+          console.log('Service updated:', response.data.data);
+        } else {
+          throw new Error(response.data.message || 'Update failed');
+        }
       } else {
-        await axios.post(
+        const response = await axios.post(
           `${API}/stages/${selectedStageId}/services`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        toast.success('Service created successfully');
+        
+        if (response.data.success) {
+          toast.success('Service created successfully');
+          console.log('Service created:', response.data.data);
+        } else {
+          throw new Error(response.data.message || 'Creation failed');
+        }
       }
       
       setIsModalOpen(false);
       resetForm();
-      fetchStages();
+      await fetchStages();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Operation failed');
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'Operation failed';
+      console.error('Service operation error:', error);
+      toast.error(errorMessage);
     }
   };
 
@@ -87,13 +125,29 @@ const ServicesManagement = () => {
     
     try {
       const token = localStorage.getItem('admin_token');
-      await axios.delete(`${API}/stages/${stageId}/services/${serviceId}`, {
+      
+      if (!token) {
+        toast.error('Authentication token not found. Please log in again.');
+        return;
+      }
+      
+      const response = await axios.delete(`${API}/stages/${stageId}/services/${serviceId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Service deleted successfully');
-      fetchStages();
+      
+      if (response.data.success) {
+        toast.success('Service deleted successfully');
+        await fetchStages();
+      } else {
+        throw new Error(response.data.message || 'Failed to delete service');
+      }
     } catch (error) {
-      toast.error('Failed to delete service');
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'Failed to delete service';
+      console.error('Error deleting service:', error);
+      toast.error(errorMessage);
     }
   };
 

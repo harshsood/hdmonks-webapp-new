@@ -198,14 +198,16 @@ async def update_blog_admin(
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_blog(blog_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="Blog not found")
         
+        # Fetch and return the updated blog
+        updated_blog = await database.get_blog_by_id(blog_id)
         logger.info(f"Blog updated: {blog_id}")
-        return {"success": True, "message": "Blog updated successfully"}
+        return {"success": True, "message": "Blog updated successfully", "data": updated_blog}
     except HTTPException:
         raise
     except Exception as e:
@@ -273,13 +275,16 @@ async def update_faq_admin(
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_faq(faq_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="FAQ not found")
         
+        # Fetch and return the updated FAQ
+        updated_faq = await database.get_faq_by_id(faq_id)
         logger.info(f"FAQ updated: {faq_id}")
-        return {"success": True, "message": "FAQ updated successfully"}
+        return {"success": True, "message": "FAQ updated successfully", "data": updated_faq}
     except HTTPException:
         raise
     except Exception as e:
@@ -350,13 +355,16 @@ async def update_testimonial_admin(
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_testimonial(testimonial_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="Testimonial not found")
         
+        # Fetch and return the updated testimonial
+        updated_testimonial = await database.get_testimonial_by_id(testimonial_id)
         logger.info(f"Testimonial updated: {testimonial_id}")
-        return {"success": True, "message": "Testimonial updated successfully"}
+        return {"success": True, "message": "Testimonial updated successfully", "data": updated_testimonial}
     except HTTPException:
         raise
     except Exception as e:
@@ -430,13 +438,16 @@ async def update_package_admin(
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_package(package_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="Package not found")
         
+        # Fetch and return the updated package
+        updated_package = await database.get_package_by_id(package_id)
         logger.info(f"Package updated: {package_id}")
-        return {"success": True, "message": "Package updated successfully"}
+        return {"success": True, "message": "Package updated successfully", "data": updated_package}
     except HTTPException:
         raise
     except Exception as e:
@@ -507,14 +518,16 @@ async def update_template_admin(
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_template(template_id, update_data)
         
         if not success:
             raise HTTPException(status_code=404, detail="Template not found")
         
+        # Fetch and return the updated template
+        updated_template = await database.get_template_by_id(template_id)
         logger.info(f"Template updated: {template_id}")
-        return {"success": True, "message": "Template updated successfully"}
+        return {"success": True, "message": "Template updated successfully", "data": updated_template}
     except HTTPException:
         raise
     except Exception as e:
@@ -571,11 +584,13 @@ async def update_settings_admin(
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.utcnow().isoformat()
         success = await database.update_settings(update_data)
         
+        # Fetch and return the updated settings
+        updated_settings = await database.get_settings()
         logger.info("Settings updated")
-        return {"success": True, "message": "Settings updated successfully"}
+        return {"success": True, "message": "Settings updated successfully", "data": updated_settings}
     except Exception as e:
         logger.error(f"Error updating settings: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
