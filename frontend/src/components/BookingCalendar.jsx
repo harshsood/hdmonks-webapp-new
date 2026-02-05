@@ -89,11 +89,12 @@ const BookingCalendar = ({ isOpen, onClose }) => {
         timeslot_id: selectedSlot.id
       };
 
+      console.log("[v0] Submitting booking:", bookingData);
       const response = await axios.post(`${API}/booking`, bookingData);
       
+      console.log("[v0] Booking response:", response.data);
       if (response.data.success) {
         toast.success('Consultation booked successfully! Check your email for confirmation.');
-        onClose();
         // Reset form
         setFormData({
           full_name: '',
@@ -104,10 +105,17 @@ const BookingCalendar = ({ isOpen, onClose }) => {
           message: ''
         });
         setSelectedSlot(null);
+        // Close dialog after brief delay
+        setTimeout(() => {
+          onClose();
+        }, 1000);
+      } else {
+        toast.error(response.data.detail || 'Failed to book consultation');
       }
     } catch (error) {
-      console.error('Error booking consultation:', error);
-      toast.error(error.response?.data?.detail || 'Failed to book consultation');
+      console.error("[v0] Booking error:", error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to book consultation';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

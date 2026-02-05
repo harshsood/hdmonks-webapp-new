@@ -116,8 +116,12 @@ async def submit_contact_inquiry(inquiry: ContactInquiryCreate):
         # Save to database
         created_inquiry = await database.create_contact_inquiry(inquiry_data)
         
-        # Send email notification
-        email_service.send_contact_inquiry_notification(created_inquiry)
+        # Send email notification (wrapped in try/except - DO NOT CRASH if email fails)
+        try:
+            email_service.send_contact_inquiry_notification(created_inquiry)
+        except Exception as email_error:
+            logger.error(f"Email sending failed (non-blocking): {str(email_error)}")
+            # Continue - inquiry is already created
         
         logger.info(f"Contact inquiry created: {created_inquiry['id']}")
         return {
@@ -170,25 +174,24 @@ async def get_settings():
 async def book_consultation(booking: ConsultationBookingCreate):
     """Book a consultation"""
     try:
-        # Check if timeslot is available
+        # Validate timeslot exists and is available
         timeslot = await database.get_timeslot_by_id(booking.timeslot_id)
         if not timeslot:
             raise HTTPException(status_code=404, detail="Time slot not found")
         if not timeslot.get('is_available'):
             raise HTTPException(status_code=400, detail="Time slot is no longer available")
         
-        # Create booking
-        #booking_obj = ConsultationBooking(
-        #    **booking.dict(),
-        #    date=timeslot['date'],
-        #    time=timeslot['time']
-        #)
+        # Prepare booking data with field name consistency
         booking_dict = booking.dict()
 
-        # 🔥 FIX FIELD NAME MISMATCH
+        # FIX: Ensure full_name field is set (normalize legacy "name" field if present)
         if "name" in booking_dict and "full_name" not in booking_dict:
             booking_dict["full_name"] = booking_dict.pop("name")
+        
+        if not booking_dict.get("full_name"):
+            raise HTTPException(status_code=400, detail="full_name is required")
 
+        # Create booking object with timeslot details
         booking_obj = ConsultationBooking(
             **booking_dict,
             date=timeslot['date'],
@@ -197,13 +200,18 @@ async def book_consultation(booking: ConsultationBookingCreate):
         
         booking_data = booking_obj.dict()
         
+        # Create booking in database
         created_booking = await database.create_booking(booking_data)
         
         # Mark timeslot as unavailable
         await database.mark_timeslot_unavailable(booking.timeslot_id)
         
-        # Send confirmation emails
-        email_service.send_booking_confirmation(created_booking)
+        # Send confirmation emails (wrapped in try/except - DO NOT CRASH if email fails)
+        try:
+            email_service.send_booking_confirmation(created_booking)
+        except Exception as email_error:
+            logger.error(f"Email sending failed (non-blocking): {str(email_error)}")
+            # Continue - booking is already created and marked
         
         logger.info(f"Consultation booked: {created_booking['id']}")
         return {
