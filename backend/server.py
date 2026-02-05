@@ -549,7 +549,7 @@ async def log_origin(request: Request, call_next):
     except Exception as e:
         logger.exception(f"Unhandled exception: {str(e)}")
         raise e   # 🔥 LET FASTAPI HANDLE IT
-        git status
+        
 # Include the router in the main app (AFTER middleware is configured)
 app.include_router(api_router)
 app.include_router(admin_router)
