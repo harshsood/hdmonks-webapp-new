@@ -176,13 +176,6 @@ async def book_consultation(booking: ConsultationBookingCreate):
         if not timeslot.get('is_available'):
             raise HTTPException(status_code=400, detail="Time slot is no longer available")
         
-<<<<<<< HEAD
-        # Create booking with full_name mapped from form
-        booking_dict = booking.dict()
-        booking_dict['date'] = timeslot['date']
-        booking_dict['time'] = timeslot['time']
-        booking_obj = ConsultationBooking(**booking_dict)
-=======
         # Create booking
         #booking_obj = ConsultationBooking(
         #    **booking.dict(),
@@ -201,7 +194,6 @@ async def book_consultation(booking: ConsultationBookingCreate):
             time=timeslot['time']
         )
         
->>>>>>> fd2b00e (Fix booking creation + secure timeslot update)
         booking_data = booking_obj.dict()
         
         created_booking = await database.create_booking(booking_data)
@@ -527,10 +519,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     #allow_origins=["*"],
-    allow_origins=[
-        "https://www.hdmonks.com",
-        "https://hdmonks.com"
-    ],
+    allow_origins=allow_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
