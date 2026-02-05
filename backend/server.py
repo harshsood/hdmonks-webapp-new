@@ -1,7 +1,8 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+#from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
 import uuid
@@ -525,18 +526,30 @@ app.add_middleware(
 )
 
 
+#@app.middleware("http")
+#async def log_origin(request, call_next):
+#    """Log Origin header and catch unhandled exceptions to aid debugging."""
+#    origin = request.headers.get("origin")
+#    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
+#    try:
+#        response = await call_next(request)
+#        return response
+#    except Exception as e:
+#        logger.exception(f"Unhandled exception processing request {request.url.path}: {str(e)}")
+#        return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
+
 @app.middleware("http")
-async def log_origin(request, call_next):
-    """Log Origin header and catch unhandled exceptions to aid debugging."""
+async def log_origin(request: Request, call_next):
     origin = request.headers.get("origin")
     logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
+
     try:
         response = await call_next(request)
         return response
     except Exception as e:
-        logger.exception(f"Unhandled exception processing request {request.url.path}: {str(e)}")
-        return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
-
+        logger.exception(f"Unhandled exception: {str(e)}")
+        raise e   # 🔥 LET FASTAPI HANDLE IT
+        git status
 # Include the router in the main app (AFTER middleware is configured)
 app.include_router(api_router)
 app.include_router(admin_router)
