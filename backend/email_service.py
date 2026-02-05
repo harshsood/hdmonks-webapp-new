@@ -85,12 +85,13 @@ class EmailService:
     
     def send_booking_confirmation(self, booking: Dict[str, Any]) -> bool:
         """Send confirmation email for consultation booking"""
+        customer_name = booking.get("full_name") or booking.get("name", "Customer")
         subject = f"Consultation Booking Confirmed - {booking['date']} at {booking['time']}"
         
         # Send to admin
         admin_body = f"""
         <h2>New Consultation Booking</h2>
-        <p><strong>Name:</strong> {booking['name']}</p>
+        <p><strong>Name:</strong> {customer_name}</p>
         <p><strong>Email:</strong> {booking['email']}</p>
         <p><strong>Phone:</strong> {booking['phone']}</p>
         <p><strong>Company:</strong> {booking.get('company', 'Not provided')}</p>
@@ -105,7 +106,7 @@ class EmailService:
         # Send confirmation to customer
         customer_body = f"""
         <h2>Consultation Booking Confirmed</h2>
-        <p>Dear {booking['name']},</p>
+        <p>Dear {customer_name},</p>
         <p>Your consultation has been successfully booked!</p>
         
         <h3>Booking Details:</h3>

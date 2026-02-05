@@ -200,8 +200,7 @@ async def book_consultation(booking: ConsultationBookingCreate):
         created_booking = await database.create_booking(booking_data)
         
         # Mark timeslot as unavailable
-        #await database.mark_timeslot_unavailable(booking.timeslot_id)
-        await database.mark_timeslot_unavailable(timeslot["id"])
+        await database.mark_timeslot_unavailable(booking.timeslot_id)
         
         # Send confirmation emails
         email_service.send_booking_confirmation(created_booking)
