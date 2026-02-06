@@ -9,6 +9,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
+from bson import ObjectId
 
 from models import (
     Stage, Service, ContactInquiry, TimeSlot, ConsultationBooking,
@@ -18,6 +19,21 @@ from models import (
 from database import database
 from email_service import email_service
 from admin_routes import admin_router
+
+def serialize_mongo(document):
+    if isinstance(document, list):
+        return [serialize_mongo(doc) for doc in document]
+
+    if isinstance(document, dict):
+        new_doc = {}
+        for k, v in document.items():
+            if isinstance(v, ObjectId):
+                new_doc[k] = str(v)
+            else:
+                new_doc[k] = serialize_mongo(v) if isinstance(v, (dict, list)) else v
+        return new_doc
+
+    return document
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -62,6 +78,7 @@ async def get_stages():
     """Get all stages with services"""
     try:
         stages = await database.get_all_stages()
+        stages = serialize_mongo(stages)
         return {"success": True, "data": stages}
     except Exception as e:
         logger.error(f"Error fetching stages: {str(e)}")
@@ -73,6 +90,7 @@ async def get_stage(stage_id: int):
     """Get a specific stage by ID"""
     try:
         stage = await database.get_stage_by_id(stage_id)
+        stage = serialize_mongo(stage)
         if not stage:
             raise HTTPException(status_code=404, detail="Stage not found")
         return {"success": True, "data": stage}
@@ -88,6 +106,7 @@ async def get_service(service_id: str):
     """Get a specific service by service_id"""
     try:
         service = await database.get_service_by_service_id(service_id)
+        service = serialize_mongo(service)
         if not service:
             raise HTTPException(status_code=404, detail="Service not found")
         return {"success": True, "data": service}
@@ -115,6 +134,7 @@ async def submit_contact_inquiry(inquiry: ContactInquiryCreate):
         
         # Save to database
         created_inquiry = await database.create_contact_inquiry(inquiry_data)
+        created_inquiry = serialize_mongo(created_inquiry)
         
         # Send email notification
         email_service.send_contact_inquiry_notification(created_inquiry)
@@ -137,6 +157,7 @@ async def get_available_timeslots(date: Optional[str] = Query(None)):
     """Get available time slots"""
     try:
         timeslots = await database.get_available_timeslots(date)
+        timeslots = serialize_mongo(timeslots)
         return {"success": True, "data": timeslots}
     except Exception as e:
         logger.error(f"Error fetching timeslots: {str(e)}")
@@ -250,6 +271,7 @@ async def book_consultation(booking: ConsultationBookingCreate):
 
         # 4️⃣ Save booking
         created_booking = await database.create_booking(booking_data)
+        created_booking = serialize_mongo(created_booking)
 
         # 5️⃣ Mark slot unavailable (safe)
         try:
@@ -281,6 +303,7 @@ async def book_consultation(booking: ConsultationBookingCreate):
         return {
             "success": True,
             "message": "Consultation booked successfully (email may be delayed).",
+            "data": created_booking if 'created_booking' in locals() else None
         }
 
 
@@ -300,6 +323,7 @@ async def create_stage(stage: StageCreate):
         stage_data = stage_obj.dict()
         
         created_stage = await database.create_stage(stage_data)
+        created_stage = serialize_mongo(created_stage)
         logger.info(f"Stage created: {created_stage['id']}")
         return {"success": True, "data": created_stage}
     except Exception as e:
@@ -323,6 +347,7 @@ async def update_stage(stage_id: int, stage_update: StageUpdate):
         
         # Fetch and return the updated stage
         updated_stage = await database.get_stage_by_id(stage_id)
+        updated_stage = serialize_mongo(updated_stage)
         logger.info(f"Stage updated: {stage_id}")
         return {
             "success": True,
@@ -415,6 +440,7 @@ async def update_service(stage_id: int, service_id: str, service_update: Service
         
         # Fetch and return the updated service
         updated_service = await database.get_service_by_service_id(service_id)
+        updated_service = serialize_mongo(updated_service)
         
         logger.info(f"Service updated: {service_id} in stage {stage_id}")
         return {
@@ -451,6 +477,7 @@ async def get_all_inquiries(skip: int = 0, limit: int = 100):
     """Get all contact inquiries (Admin)"""
     try:
         inquiries = await database.get_all_inquiries(skip, limit)
+        inquiries = serialize_mongo(inquiries)
         return {"success": True, "data": inquiries}
     except Exception as e:
         logger.error(f"Error fetching inquiries: {str(e)}")
@@ -482,6 +509,7 @@ async def create_timeslot(timeslot: TimeSlotCreate):
         timeslot_data = timeslot_obj.dict()
         
         created_timeslot = await database.create_timeslot(timeslot_data)
+        created_timeslot = serialize_mongo(created_timeslot)
         logger.info(f"Timeslot created: {created_timeslot['id']}")
         return {"success": True, "data": created_timeslot}
     except Exception as e:
@@ -508,6 +536,7 @@ async def update_timeslot(timeslot_id: str, timeslot_update: dict):
         
         # Fetch and return the updated timeslot
         updated_timeslot = await database.get_timeslot_by_id(timeslot_id)
+        updated_timeslot = serialize_mongo(updated_timeslot)
         logger.info(f"Timeslot updated: {timeslot_id}")
         return {
             "success": True,
@@ -543,6 +572,7 @@ async def get_all_bookings(skip: int = 0, limit: int = 100):
     """Get all consultation bookings (Admin)"""
     try:
         bookings = await database.get_all_bookings(skip, limit)
+        bookings = serialize_mongo(bookings)
         return {"success": True, "data": bookings}
     except Exception as e:
         logger.error(f"Error fetching bookings: {str(e)}")
@@ -587,9 +617,10 @@ async def log_origin(request: Request, call_next):
     try:
         response = await call_next(request)
         return response
-    except Exception as e:
+    except Exception as e:git add .
         logger.exception(f"Unhandled exception: {str(e)}")
-        return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
+        #return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
+        raise e
 
 # Add middleware BEFORE including routers
 app.add_middleware(
