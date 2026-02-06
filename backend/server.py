@@ -617,7 +617,7 @@ async def log_origin(request: Request, call_next):
     try:
         response = await call_next(request)
         return response
-    except Exception as e:git add .
+    except Exception as e:
         logger.exception(f"Unhandled exception: {str(e)}")
         #return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
         raise e
