@@ -308,7 +308,7 @@ class Database:
     async def get_admin_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """Get admin by username"""
        # return await self.db.admins.find_one({"username": username})
-         return await self.db.admins.find_one({"username": username}, {"_id": 0})
+        return await self.db.admins.find_one({"username": username}, {"_id": 0})
     
     async def create_admin(self, admin_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create admin user"""
