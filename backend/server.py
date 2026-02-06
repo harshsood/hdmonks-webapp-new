@@ -501,11 +501,23 @@ async def update_booking_status(booking_id: str, status: str):
 
 
 # Configure CORS origins via environment to avoid wildcard with credentials
+#_allowed_origins = os.environ.get("ALLOWED_ORIGINS")
+#if _allowed_origins:
+#    allow_origins = [o.strip() for o in _allowed_origins.split(",") if o.strip()]
+#else:
+#    # default to known frontend domains and localhost for testing
+#    allow_origins = [
+#        "https://www.hdmonks.com",
+#        "https://hdmonks.com",
+#        "http://localhost:3000",
+#    ]
+#
+#logger.info(f"CORS allowed origins: {allow_origins}")
+
 _allowed_origins = os.environ.get("ALLOWED_ORIGINS")
 if _allowed_origins:
     allow_origins = [o.strip() for o in _allowed_origins.split(",") if o.strip()]
 else:
-    # default to known frontend domains and localhost for testing
     allow_origins = [
         "https://www.hdmonks.com",
         "https://hdmonks.com",
@@ -515,15 +527,30 @@ else:
 logger.info(f"CORS allowed origins: {allow_origins}")
 
 # Add middleware BEFORE including routers
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    #allow_origins=["*"],
-    allow_origins=allow_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_credentials=True,
+#    #allow_origins=["*"],
+#    allow_origins=allow_origins,
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
 
+@app.middleware("http")
+async def log_origin(request: Request, call_next):
+    origin = request.headers.get("origin")
+    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("Unhandled server error")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "detail": "Internal server error"}
+        )
+
+    return response
 
 #@app.middleware("http")
 #async def log_origin(request, call_next):
@@ -537,22 +564,21 @@ app.add_middleware(
 #        logger.exception(f"Unhandled exception processing request {request.url.path}: {str(e)}")
 #        return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
 
-@app.middleware("http")
-async def log_origin(request: Request, call_next):
-    origin = request.headers.get("origin")
-    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
-
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        logger.exception(f"Unhandled exception: {str(e)}")
-        raise e   # 🔥 LET FASTAPI HANDLE IT
-        
+#@app.middleware("http")
+#async def log_origin(request: Request, call_next):
+#    origin = request.headers.get("origin")
+#    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
+#
+#    try:
+#        response = await call_next(request)
+#        return response
+#    except Exception as e:
+#        logger.exception(f"Unhandled exception: {str(e)}")
+#        raise e   # 🔥 LET FASTAPI HANDLE IT
+       
 # Include the router in the main app (AFTER middleware is configured)
 app.include_router(api_router)
 app.include_router(admin_router)
-
 
 @app.on_event("startup")
 async def startup_db_client():
