@@ -106,12 +106,19 @@ const BookingCalendar = ({ isOpen, onClose }) => {
         setSelectedSlot(null);
       }
     } catch (error) {
-      console.error('Error booking consultation:', error);
-      toast.error(error.response?.data?.detail || 'Failed to book consultation');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        console.error('Error booking consultation:', error);
+        // More specific error messages
+        if (error.code === 'ERR_NETWORK') {
+          toast.error('Network error - please check your connection and try again');
+        } else if (error.response?.status === 400) {
+          toast.error(error.response?.data?.detail || 'Invalid booking data');
+        } else if (error.response?.status === 404) {
+        toast.error('Time slot is no longer available');
+        } else {
+        toast.error(error.response?.data?.detail || 'Failed to book consultation. Please try again.');
+        }
+      }
+    };
 
   const groupedSlots = groupSlotsByDate();
   const dates = Object.keys(groupedSlots).sort();
