@@ -308,7 +308,7 @@ class Database:
     async def get_admin_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """Get admin by username"""
        # return await self.db.admins.find_one({"username": username})
-        return await self.db.admins.find_one({"username": username}, {"_id": 0})
+         return await self.db.admins.find_one({"username": username}, {"_id": 0})
     
     async def create_admin(self, admin_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create admin user"""
@@ -322,7 +322,7 @@ class Database:
         query = {"published": True} if published_only else {}
        # blogs = await self.db.blogs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
        # return blogs
-       return await self.db.blogs.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+         return await self.db.blogs.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     async def get_blog_by_id(self, blog_id: str) -> Optional[Dict[str, Any]]:
         """Get blog by ID"""
@@ -332,7 +332,7 @@ class Database:
     async def get_blog_by_slug(self, slug: str) -> Optional[Dict[str, Any]]:
         """Get blog by slug"""
        # return await self.db.blogs.find_one({"slug": slug})
-       return await self.db.blogs.find_one({"slug": slug}, {"_id": 0})
+         return await self.db.blogs.find_one({"slug": slug}, {"_id": 0})
         
     
     async def create_blog(self, blog_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -368,12 +368,12 @@ class Database:
         query = {"published": True} if published_only else {}
        # faqs = await self.db.faqs.find(query).sort("order", 1).to_list(1000)
        # return faqs
-       return await self.db.faqs.find(query, {"_id": 0}).sort("order", 1).to_list(1000)
+         return await self.db.faqs.find(query, {"_id": 0}).sort("order", 1).to_list(1000)
     
     async def get_faq_by_id(self, faq_id: str) -> Optional[Dict[str, Any]]:
         """Get FAQ by ID"""
        # return await self.db.faqs.find_one({"id": faq_id})
-       return await self.db.faqs.find_one({"id": faq_id}, {"_id": 0})
+         return await self.db.faqs.find_one({"id": faq_id}, {"_id": 0})
     
     async def create_faq(self, faq_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new FAQ"""
@@ -400,12 +400,12 @@ class Database:
         query = {"published": True} if published_only else {}
        # testimonials = await self.db.testimonials.find(query).sort("created_at", -1).to_list(1000)
        # return testimonials
-       return await self.db.testimonials.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    
+         return await self.db.testimonials.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+     
     async def get_testimonial_by_id(self, testimonial_id: str) -> Optional[Dict[str, Any]]:
         """Get testimonial by ID"""
        # return await self.db.testimonials.find_one({"id": testimonial_id})
-       return await self.db.testimonials.find_one({"id": testimonial_id}, {"_id": 0})
+         return await self.db.testimonials.find_one({"id": testimonial_id}, {"_id": 0})
     
     async def create_testimonial(self, testimonial_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new testimonial"""
