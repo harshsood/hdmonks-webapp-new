@@ -156,9 +156,6 @@ const ServiceDetail = () => {
             <div className="lg:col-span-2 space-y-8">
               <Card className="p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Overview</h2>
-                <p className="text-gray-700 leading-relaxed mb-6">
-                  {service.details}
-                </p>
                 <div
                   className="prose max-w-none"
                   dangerouslySetInnerHTML={{ __html: service.details }}
