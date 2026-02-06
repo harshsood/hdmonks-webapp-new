@@ -159,6 +159,10 @@ const ServiceDetail = () => {
                 <p className="text-gray-700 leading-relaxed mb-6">
                   {service.details}
                 </p>
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: service.details }}
+                />
                 <p className="text-gray-700 leading-relaxed">
                   Our expert team brings years of experience in {service.name.toLowerCase()}, ensuring that your business stays compliant, efficient, and ready for growth. We handle the complexity so you can focus on what matters most - building your business.
                 </p>
