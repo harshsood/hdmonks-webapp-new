@@ -203,7 +203,11 @@ async def book_consultation(booking: ConsultationBookingCreate):
         await database.mark_timeslot_unavailable(booking.timeslot_id)
         
         # Send confirmation emails
-        email_service.send_booking_confirmation(created_booking)
+        #email_service.send_booking_confirmation(created_booking)
+        try:
+            email_service.send_booking_confirmation(created_booking)
+        except Exception as email_error:
+            logger.error(f"Email sending failed: {email_error}")
         
         logger.info(f"Consultation booked: {created_booking['id']}")
         return {
