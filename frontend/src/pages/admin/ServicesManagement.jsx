@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Badge } from '../../components/ui/badge';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api/admin`;
@@ -343,7 +345,7 @@ const ServicesManagement = () => {
               />
             </div>
 
-            <div>
+           <div>
               <label className="block text-sm font-medium mb-2">Full Details</label>
               <textarea
                 value={formData.details}
@@ -352,7 +354,25 @@ const ServicesManagement = () => {
                 rows="4"
                 required
               />
-            </div>
+            </div> 
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Full Details</label>
+              <ReactQuill
+                theme="snow"
+                value={formData.details}
+                onChange={(value) => setFormData({...formData, details: value})}
+                modules={{
+                  toolbar: [
+                  [{ 'header': [1, 2, 3, false] }],
+                  ['bold', 'italic', 'underline', 'strike'],
+                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                  ['link'],
+                  ['clean']
+                  ]
+                  }}
+                />
+              </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Icon</label>
