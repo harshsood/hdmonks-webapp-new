@@ -514,6 +514,17 @@ else:
 
 logger.info(f"CORS allowed origins: {allow_origins}")
 
+@app.middleware("http")
+async def log_origin(request: Request, call_next):
+    origin = request.headers.get("origin")
+    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        logger.exception(f"Unhandled exception: {str(e)}")
+        return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
+
 # Add middleware BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
@@ -537,17 +548,17 @@ app.add_middleware(
 #        logger.exception(f"Unhandled exception processing request {request.url.path}: {str(e)}")
 #        return JSONResponse(status_code=500, content={"success": False, "detail": "Internal server error"})
 
-@app.middleware("http")
-async def log_origin(request: Request, call_next):
-    origin = request.headers.get("origin")
-    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
-
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        logger.exception(f"Unhandled exception: {str(e)}")
-        raise e   # 🔥 LET FASTAPI HANDLE IT
+#@app.middleware("http")
+#async def log_origin(request: Request, call_next):
+#    origin = request.headers.get("origin")
+#    logger.info(f"Incoming request: {request.method} {request.url.path} Origin: {origin}")
+#
+#    try:
+#        response = await call_next(request)
+#        return response
+#    except Exception as e:
+#        logger.exception(f"Unhandled exception: {str(e)}")
+#        raise e   # 🔥 LET FASTAPI HANDLE IT
         
 # Include the router in the main app (AFTER middleware is configured)
 app.include_router(api_router)
