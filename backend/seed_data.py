@@ -185,6 +185,17 @@ async def seed_stages_and_services():
                     "details": "Industry-specific compliance management including ISO certification support, RERA registration, sector-specific licensing, and maintaining ongoing regulatory adherence.",
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow()
+                },
+                {
+                    "id": "corporate-gifting-3",
+                    "service_id": "corporate-gifting",
+                    "name": "Corporate Gifting",
+                    "description": "Empowering brand recall and loyalty through thoughtful, customized corporate gifting solutions.",
+                    "icon": "Gift",
+                    "relevant_for": ["msme"],
+                    "details": "Comprehensive corporate gifting solutions including customized gift selection, brand integration, bulk ordering, and logistics management for employee recognition and client appreciation programs.",
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
                 }
             ],
             "created_at": datetime.utcnow(),
