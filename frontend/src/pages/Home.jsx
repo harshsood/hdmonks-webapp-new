@@ -86,7 +86,7 @@ const Home = () => {
 
   const filteredStages = stages.map(stage => ({
     ...stage,
-    services: stage.services.filter(service => {
+    services: (stage.services || []).filter(service => {
       // Handle missing or invalid relevant_for field
       if (!service.relevant_for || !Array.isArray(service.relevant_for)) {
         console.warn('Service missing valid relevant_for field:', service);
@@ -251,9 +251,9 @@ const Home = () => {
                       <p className="text-gray-600 mb-4">{stage.subtitle}</p>
 
                       {/* Services Grid */}
-                      {stage.services.length > 0 && (
+                      {(stage.services || []).length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                          {stage.services.map((service) => {
+                          {(stage.services || []).map((service) => {
                             const IconComponent = iconMap[service.icon];
                             return (
                               <div
@@ -281,7 +281,7 @@ const Home = () => {
                         </div>
                       )}
 
-                      {stage.services.length === 0 && (
+                      {(stage.services || []).length === 0 && (
                         <p className="text-sm text-gray-500 italic mt-4">
                           Not applicable for your current business stage
                         </p>
