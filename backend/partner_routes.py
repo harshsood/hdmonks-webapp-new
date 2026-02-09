@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Header, Depends
 from typing import Optional
 from datetime import datetime
 import logging
+import uuid
 
 from models import (
     PartnerLogin, ClientCreate, ClientUpdate,
@@ -67,7 +68,6 @@ async def partner_register(payload: dict):
             raise HTTPException(status_code=400, detail="Username already exists")
 
         from partner_auth import hash_password
-        import uuid
         partner_data = {
             "id": str(uuid.uuid4()),
             "username": username,
@@ -126,9 +126,11 @@ async def create_client(client: ClientCreate, session: dict = Depends(verify_par
     try:
         partner_id = session["partner_id"]
         client_data = client.dict()
+        client_data["id"] = str(uuid.uuid4())
         client_data["partner_id"] = partner_id
         client_data["created_at"] = datetime.utcnow().isoformat()
         client_data["updated_at"] = datetime.utcnow().isoformat()
+        client_data["services"] = []
         created = await database.create_client(client_data)
         return {"success": True, "data": created}
     except Exception as e:
