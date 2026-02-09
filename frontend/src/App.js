@@ -27,6 +27,7 @@ import PartnerDashboard from "./pages/partner/Dashboard";
 import ClientsManagement from "./pages/partner/ClientsManagement";
 import ClientDetail from "./pages/partner/ClientDetail";
 import ProtectedPartnerRoute from "./components/ProtectedPartnerRoute";
+import PartnerProfile from "./pages/partner/PartnerProfile";
 
 function App() {
   return (
@@ -77,6 +78,7 @@ function App() {
               <Route path="dashboard" element={<PartnerDashboard />} />
               <Route path="clients" element={<ClientsManagement />} />
               <Route path="clients/:clientId" element={<ClientDetail />} />
+                        <Route path="profile" element={<PartnerProfile />} />
             </Route>
           </Routes>
         </BrowserRouter>
