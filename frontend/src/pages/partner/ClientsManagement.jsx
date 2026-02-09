@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { usePartnerAuth } from '../../contexts/PartnerAuthContext';
 
@@ -9,14 +9,14 @@ const ClientsManagement = () => {
   const [clients, setClients] = useState([]);
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', company: '' });
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const res = await axios.get(`${BACKEND}/api/partner/clients`, { headers: { Authorization: `Bearer ${token}` } });
       setClients(res.data.data || []);
     } catch (e) { console.error(e); }
-  };
+  }, [token]);
 
-  useEffect(() => { if (token) fetchClients(); }, [token]);
+  useEffect(() => { if (token) fetchClients(); }, [token, fetchClients]);
 
   const createClient = async (e) => {
     e.preventDefault();

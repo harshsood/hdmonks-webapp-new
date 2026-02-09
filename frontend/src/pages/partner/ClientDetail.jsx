@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePartnerAuth } from '../../contexts/PartnerAuthContext';
@@ -12,14 +12,14 @@ const ClientDetail = () => {
   const [client, setClient] = useState(null);
   const [serviceForm, setServiceForm] = useState({ service_id: '', service_name: '', price: '' });
 
-  const fetch = async () => {
+  const fetch = useCallback(async () => {
     try {
       const res = await axios.get(`${BACKEND}/api/partner/clients/${clientId}`, { headers: { Authorization: `Bearer ${token}` } });
       setClient(res.data.data);
     } catch (e) { console.error(e); }
-  };
+  }, [clientId, token]);
 
-  useEffect(() => { if (token) fetch(); }, [token]);
+  useEffect(() => { if (token) fetch(); }, [token, clientId, fetch]);
 
   const addService = async (e) => {
     e.preventDefault();
