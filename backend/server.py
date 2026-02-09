@@ -385,9 +385,12 @@ async def add_service(stage_id: int, service: ServiceCreate):
     try:
         service_data = service.dict()
         
-        # Generate service_id if not provided
+        # Generate IDs if not provided
         if not service_data.get('service_id'):
             service_data['service_id'] = str(uuid.uuid4())
+        # Generate a unique id for the service (used as React key)
+        if not service_data.get('id'):
+            service_data['id'] = f"{service_data['service_id']}-{str(uuid.uuid4())[:8]}"
         
         # Ensure relevant_for is always a list
         if not service_data.get('relevant_for'):

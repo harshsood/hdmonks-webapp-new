@@ -3,6 +3,7 @@ import os
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,13 @@ class Database:
     
     def _sanitize_service(self, service: Dict[str, Any]) -> Dict[str, Any]:
         """Ensure service has required fields with valid data"""
+        # Generate id if missing
+        if not service.get('id'):
+            service['id'] = service.get('service_id', str(uuid.uuid4()))
+        # Ensure service_id exists
+        if not service.get('service_id'):
+            service['service_id'] = str(uuid.uuid4())
+        # Ensure relevant_for is a list
         if not isinstance(service.get('relevant_for'), list):
             service['relevant_for'] = ['startup', 'msme']
         return service

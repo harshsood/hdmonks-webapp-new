@@ -7,6 +7,7 @@ import uuid
 # ===== STAGE AND SERVICE MODELS =====
 
 class Service(BaseModel):
+    id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()))
     service_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str
@@ -21,6 +22,7 @@ class Service(BaseModel):
 
 
 class ServiceCreate(BaseModel):
+    id: Optional[str] = None
     service_id: Optional[str] = None
     name: str
     description: str
