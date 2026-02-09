@@ -55,8 +55,8 @@ class Database:
         # Ensure service_id exists
         if not service.get('service_id'):
             service['service_id'] = str(uuid.uuid4())
-        # Ensure relevant_for is a list
-        if not isinstance(service.get('relevant_for'), list):
+        # Ensure relevant_for is a valid list with default if empty
+        if not isinstance(service.get('relevant_for'), list) or len(service.get('relevant_for', [])) == 0:
             service['relevant_for'] = ['startup', 'msme']
         return service
     

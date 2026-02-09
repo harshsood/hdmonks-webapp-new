@@ -161,7 +161,7 @@ const ServicesManagement = () => {
       name: service.name,
       description: service.description,
       icon: service.icon,
-      relevant_for: service.relevant_for || [],
+      relevant_for: (service.relevant_for && service.relevant_for.length > 0) ? service.relevant_for : ['startup', 'msme'],
       details: service.details
     });
     setIsModalOpen(true);

@@ -392,8 +392,8 @@ async def add_service(stage_id: int, service: ServiceCreate):
         if not service_data.get('id'):
             service_data['id'] = f"{service_data['service_id']}-{str(uuid.uuid4())[:8]}"
         
-        # Ensure relevant_for is always a list
-        if not service_data.get('relevant_for'):
+        # Ensure relevant_for is always a valid list
+        if not service_data.get('relevant_for') or (isinstance(service_data.get('relevant_for'), list) and len(service_data['relevant_for']) == 0):
             service_data['relevant_for'] = ['startup', 'msme']
         elif not isinstance(service_data['relevant_for'], list):
             service_data['relevant_for'] = list(service_data['relevant_for']) if service_data['relevant_for'] else ['startup', 'msme']
@@ -429,10 +429,13 @@ async def update_service(stage_id: int, service_id: str, service_update: Service
         if not update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
         
-        # Ensure relevant_for is always a list if provided
+        # Ensure relevant_for is always a valid list if provided
         if 'relevant_for' in update_data:
             if not isinstance(update_data['relevant_for'], list):
                 update_data['relevant_for'] = list(update_data['relevant_for']) if update_data['relevant_for'] else ['startup', 'msme']
+            elif len(update_data['relevant_for']) == 0:
+                # If empty list was provided, set default
+                update_data['relevant_for'] = ['startup', 'msme']
         
         update_data['updated_at'] = datetime.utcnow().isoformat()
         logger.info(f"Updating service {service_id} in stage {stage_id}: {update_data}")
