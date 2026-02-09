@@ -12,7 +12,9 @@ const ClientsManagement = () => {
   const fetchClients = useCallback(async () => {
     try {
       const res = await axios.get(`${BACKEND}/api/partner/clients`, { headers: { Authorization: `Bearer ${token}` } });
-      setClients(res.data.data || []);
+      // Deduplicate clients by ID to avoid showing duplicates
+      const uniqueClients = Array.from(new Map((res.data.data || []).map(c => [c.id, c])).values());
+      setClients(uniqueClients);
     } catch (e) { console.error(e); }
   }, [token]);
 
