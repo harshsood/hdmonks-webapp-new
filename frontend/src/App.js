@@ -3,6 +3,7 @@ import "@/App.css";
 import Home from "./pages/Home";
 import ServiceDetail from "./pages/ServiceDetail";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
+import { PartnerAuthProvider } from "./contexts/PartnerAuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -20,10 +21,17 @@ import PackagesManagement from "./pages/admin/PackagesManagement";
 import EmailTemplatesManagement from "./pages/admin/EmailTemplatesManagement";
 import SettingsManagement from "./pages/admin/SettingsManagement";
 import AnalyticsManagement from "./pages/admin/AnalyticsManagement";
+import PartnerLogin from "./pages/partner/PartnerLogin";
+import PartnerLayout from "./pages/partner/PartnerLayout";
+import PartnerDashboard from "./pages/partner/Dashboard";
+import ClientsManagement from "./pages/partner/ClientsManagement";
+import ClientDetail from "./pages/partner/ClientDetail";
+import ProtectedPartnerRoute from "./components/ProtectedPartnerRoute";
 
 function App() {
   return (
     <SettingsProvider>
+      <PartnerAuthProvider>
       <AdminAuthProvider>
         <div className="App">
           <BrowserRouter>
@@ -56,10 +64,25 @@ function App() {
               <Route path="settings" element={<SettingsManagement />} />
               <Route path="analytics" element={<AnalyticsManagement />} />
             </Route>
+            {/* Partner Routes */}
+            <Route path="/partner/login" element={<PartnerLogin />} />
+            <Route
+              path="/partner"
+              element={
+                <ProtectedPartnerRoute>
+                  <PartnerLayout />
+                </ProtectedPartnerRoute>
+              }
+            >
+              <Route path="dashboard" element={<PartnerDashboard />} />
+              <Route path="clients" element={<ClientsManagement />} />
+              <Route path="clients/:clientId" element={<ClientDetail />} />
+            </Route>
           </Routes>
         </BrowserRouter>
         </div>
       </AdminAuthProvider>
+      </PartnerAuthProvider>
     </SettingsProvider>
   );
 }

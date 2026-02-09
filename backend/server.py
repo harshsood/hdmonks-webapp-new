@@ -19,6 +19,7 @@ from models import (
 from database import database
 from email_service import email_service
 from admin_routes import admin_router
+from partner_routes import partner_router
 
 def serialize_mongo(document):
     if isinstance(document, list):
@@ -660,6 +661,7 @@ app.add_middleware(
 # Include the router in the main app (AFTER middleware is configured)
 app.include_router(api_router)
 app.include_router(admin_router)
+app.include_router(partner_router)
 
 
 @app.on_event("startup")

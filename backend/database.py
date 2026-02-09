@@ -542,6 +542,87 @@ class Database:
             "by_type": {item["_id"]: item["count"] for item in event_types}
         }
 
+    # ===== PARTNER / CLIENT OPERATIONS =====
+    async def get_partner_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.partners.find_one({"username": username}, {"_id": 0})
+
+    async def create_partner(self, partner_data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        result = await self.db.partners.insert_one(partner_data)
+        partner_data['_id'] = str(result.inserted_id)
+        return partner_data
+
+    async def create_client(self, client_data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        client_data = self._serialize_datetime(client_data)
+        await self.db.clients.insert_one(client_data)
+        return client_data
+
+    async def get_clients_by_partner(self, partner_id: str) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.clients.find({"partner_id": partner_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+    async def get_client_by_id(self, client_id: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.clients.find_one({"id": client_id}, {"_id": 0})
+
+    async def update_client(self, partner_id: str, client_id: str, update_data: Dict[str, Any]) -> bool:
+        if self.db is None:
+            await self.connect()
+        update_data = self._serialize_datetime(update_data)
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$set": update_data})
+        return result.modified_count > 0
+
+    async def delete_client(self, partner_id: str, client_id: str) -> bool:
+        if self.db is None:
+            await self.connect()
+        result = await self.db.clients.delete_one({"id": client_id, "partner_id": partner_id})
+        return result.deleted_count > 0
+
+    async def add_service_to_client(self, partner_id: str, client_id: str, service_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        service_data = self._serialize_datetime(service_data)
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$push": {"services": service_data}})
+        if result.modified_count > 0:
+            return await self.get_client_by_id(client_id)
+        return None
+
+    async def update_client_service(self, partner_id: str, client_id: str, service_id: str, update_data: Dict[str, Any]) -> bool:
+        if self.db is None:
+            await self.connect()
+        update_data = self._serialize_datetime(update_data)
+        set_query = {f"services.$.{k}": v for k, v in update_data.items()}
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
+        return result.modified_count > 0
+
+    async def delete_client_service(self, partner_id: str, client_id: str, service_id: str) -> bool:
+        if self.db is None:
+            await self.connect()
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$pull": {"services": {"id": service_id}}})
+        return result.modified_count > 0
+
+    async def get_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        pipeline = [
+            {"$match": {"partner_id": partner_id}},
+            {"$unwind": {"path": "$services", "preserveNullAndEmptyArrays": True}},
+            {"$group": {"_id": "$id", "client_name": {"$first": "$full_name"}, "client_total": {"$sum": {"$ifNull": ["$services.price", 0]}}}},
+            {"$group": {"_id": None, "total_revenue": {"$sum": "$client_total"}, "by_client": {"$push": {"client_id": "$_id", "client_name": "$client_name", "amount": "$client_total"}}}}
+        ]
+        res = await self.db.clients.aggregate(pipeline).to_list(1)
+        if not res:
+            return {"total_revenue": 0, "by_client": []}
+        item = res[0]
+        return {"total_revenue": item.get("total_revenue", 0), "by_client": item.get("by_client", [])}
+
 
 # Import here to avoid circular import
 from typing import Dict, Any

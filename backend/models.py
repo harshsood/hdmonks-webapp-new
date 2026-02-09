@@ -350,6 +350,69 @@ class SettingsUpdate(BaseModel):
     social_links: Optional[dict] = None
 
 
+# ===== PARTNER / CLIENT MODELS =====
+class Partner(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    username: str
+    email: EmailStr
+    password_hash: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PartnerLogin(BaseModel):
+    username: str
+    password: str
+
+
+class ClientService(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    service_id: str
+    service_name: Optional[str] = None
+    price: Optional[float] = 0.0
+    purchase_date: datetime = Field(default_factory=datetime.utcnow)
+    metadata: Optional[dict] = {}
+
+
+class Client(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    partner_id: str
+    full_name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    services: List[ClientService] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ClientCreate(BaseModel):
+    full_name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+
+
+class ClientUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+
+
+class ClientServiceCreate(BaseModel):
+    service_id: str
+    service_name: Optional[str] = None
+    price: Optional[float] = 0.0
+    metadata: Optional[dict] = {}
+
+
+class ClientServiceUpdate(BaseModel):
+    price: Optional[float] = None
+    metadata: Optional[dict] = None
+
+
 # Analytics Model
 class Analytics(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
