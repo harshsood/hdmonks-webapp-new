@@ -188,7 +188,7 @@ const ServicesManagement = () => {
   ];
 
   const allServices = stages.flatMap(stage => 
-    stage.services.map(service => ({ ...service, stageId: stage.id, stageName: stage.title }))
+    (stage.services || []).map(service => ({ ...service, stageId: stage.id, stageName: stage.title }))
   );
 
   const filteredServices = allServices.filter(service =>
