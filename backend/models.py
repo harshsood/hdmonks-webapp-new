@@ -4,6 +4,22 @@ from datetime import datetime
 import uuid
 
 
+# ===== CONTENT SECTION MODEL =====
+
+class ContentSection(BaseModel):
+    """SEO-friendly content section with heading and content"""
+    id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()))
+    heading: str
+    content: str
+    order: int = 0
+
+
+class ContentSectionCreate(BaseModel):
+    heading: str
+    content: str
+    order: int = 0
+
+
 # ===== STAGE AND SERVICE MODELS =====
 
 class Service(BaseModel):
@@ -17,6 +33,7 @@ class Service(BaseModel):
     price: Optional[str] = None
     duration: Optional[str] = None
     features: List[str] = []
+    content_sections: List[dict] = []  # List of content sections for SEO
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -32,6 +49,7 @@ class ServiceCreate(BaseModel):
     price: Optional[str] = None
     duration: Optional[str] = None
     features: List[str] = []
+    content_sections: Optional[List[dict]] = []
 
 
 class ServiceUpdate(BaseModel):
@@ -43,6 +61,7 @@ class ServiceUpdate(BaseModel):
     price: Optional[str] = None
     duration: Optional[str] = None
     features: Optional[List[str]] = None
+    content_sections: Optional[List[dict]] = None
 
 
 class Stage(BaseModel):

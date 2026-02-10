@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -25,7 +25,8 @@ const ServicesManagement = () => {
     description: '',
     icon: 'Briefcase',
     relevant_for: ['startup', 'msme'],
-    details: ''
+    details: '',
+    content_sections: []
   });
 
   useEffect(() => {
@@ -162,7 +163,8 @@ const ServicesManagement = () => {
       description: service.description,
       icon: service.icon,
       relevant_for: (service.relevant_for && service.relevant_for.length > 0) ? service.relevant_for : ['startup', 'msme'],
-      details: service.details
+      details: service.details,
+      content_sections: service.content_sections && service.content_sections.length > 0 ? service.content_sections : []
     });
     setIsModalOpen(true);
   };
@@ -176,7 +178,54 @@ const ServicesManagement = () => {
       description: '',
       icon: 'Briefcase',
       relevant_for: ['startup', 'msme'],
-      details: ''
+      details: '',
+      content_sections: []
+    });
+  };
+
+  const addContentSection = () => {
+    const newSection = {
+      id: `section_${Date.now()}`,
+      heading: '',
+      content: '',
+      order: formData.content_sections.length
+    };
+    setFormData({
+      ...formData,
+      content_sections: [...formData.content_sections, newSection]
+    });
+  };
+
+  const updateContentSection = (index, field, value) => {
+    const updatedSections = [...formData.content_sections];
+    updatedSections[index] = { ...updatedSections[index], [field]: value };
+    setFormData({
+      ...formData,
+      content_sections: updatedSections
+    });
+  };
+
+  const removeContentSection = (index) => {
+    const updatedSections = formData.content_sections.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      content_sections: updatedSections.map((section, idx) => ({ ...section, order: idx }))
+    });
+  };
+
+  const moveContentSection = (index, direction) => {
+    const updatedSections = [...formData.content_sections];
+    if (direction === 'up' && index > 0) {
+      [updatedSections[index], updatedSections[index - 1]] = [updatedSections[index - 1], updatedSections[index]];
+    } else if (direction === 'down' && index < updatedSections.length - 1) {
+      [updatedSections[index], updatedSections[index + 1]] = [updatedSections[index + 1], updatedSections[index]];
+    }
+    updatedSections.forEach((section, idx) => {
+      section.order = idx;
+    });
+    setFormData({
+      ...formData,
+      content_sections: updatedSections
     });
   };
 
@@ -240,6 +289,7 @@ const ServicesManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Relevant For</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Icon</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Content Sections</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -265,6 +315,13 @@ const ServicesManagement = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-500">{service.icon}</td>
+                  <td className="px-6 py-4">
+                    {service.content_sections && service.content_sections.length > 0 ? (
+                      <Badge className="bg-green-100 text-green-800">{service.content_sections.length} sections</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-gray-500">None</Badge>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right space-x-2">
                     <Button
                       size="sm"
@@ -407,6 +464,101 @@ const ServicesManagement = () => {
                   />
                   Established MSME
                 </label>
+              </div>
+            </div>
+
+            {/* Content Sections Manager */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-sm font-medium">SEO Content Sections (Optional)</label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addContentSection}
+                  className="text-orange-600 border-orange-300"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Section
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {formData.content_sections.map((section, index) => (
+                  <Card key={section.id || index} className="p-4 bg-blue-50 border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-900">Section {index + 1}</h4>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => moveContentSection(index, 'up')}
+                          disabled={index === 0}
+                          className="p-0 w-8 h-8"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => moveContentSection(index, 'down')}
+                          disabled={index === formData.content_sections.length - 1}
+                          className="p-0 w-8 h-8"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeContentSection(index)}
+                          className="p-0 w-8 h-8 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Heading</label>
+                        <input
+                          type="text"
+                          value={section.heading}
+                          onChange={(e) => updateContentSection(index, 'heading', e.target.value)}
+                          placeholder="e.g., Key Benefits or Why Choose Us?"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Content (HTML/Rich Text)</label>
+                        <ReactQuill
+                          theme="snow"
+                          value={section.content}
+                          onChange={(value) => updateContentSection(index, 'content', value)}
+                          modules={{
+                            toolbar: [
+                              [{ 'header': [2, 3, false] }],
+                              ['bold', 'italic', 'underline'],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              ['link'],
+                              ['clean']
+                            ]
+                          }}
+                          style={{ height: '150px', marginBottom: '40px' }}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+
+                {formData.content_sections.length === 0 && (
+                  <p className="text-sm text-gray-500 italic">No content sections added. Click "Add Section" to create SEO-friendly content.</p>
+                )}
               </div>
             </div>
 

@@ -165,6 +165,24 @@ const ServiceDetail = () => {
                 </p>
               </Card>
 
+              {service.content_sections && service.content_sections.length > 0 && (
+                <>
+                  {service.content_sections
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((section, index) => (
+                      <Card key={index} className="p-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                          {section.heading}
+                        </h2>
+                        <div
+                          className="prose max-w-none text-gray-700 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: section.content }}
+                        />
+                      </Card>
+                    ))}
+                </>
+              )}
+
               <Card className="p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Key Deliverables</h2>
                 <ul className="space-y-4">
