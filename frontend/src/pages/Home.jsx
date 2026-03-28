@@ -61,7 +61,7 @@ const iconMap = {
 const Home = () => {
   const [businessType, setBusinessType] = useState('startup');
   const [stages, setStages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -120,17 +120,6 @@ const Home = () => {
       toast.error('Failed to submit inquiry. Please try again.');
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -229,7 +218,15 @@ const Home = () => {
 
           {/* Stages Timeline */}
           <div className="space-y-8">
-            {filteredStages.map((stage, index) => (
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">Loading services...</p>
+                </div>
+              </div>
+            ) : filteredStages.length > 0 ? (
+              filteredStages.map((stage, index) => (
               <div
                 key={stage.id}
                 className="relative"
@@ -297,7 +294,12 @@ const Home = () => {
                   </div>
                 )}
               </div>
-            ))}
+            ))
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No services available at the moment.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
