@@ -563,6 +563,29 @@ class Database:
         partner_data['_id'] = str(result.inserted_id)
         return partner_data
 
+    async def get_partners_by_category(self, category: str) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.partners.find({"category": category}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+    async def get_partner_by_id(self, partner_id: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.partners.find_one({"id": partner_id}, {"_id": 0})
+
+    async def update_partner(self, partner_id: str, update_data: Dict[str, Any]) -> bool:
+        if self.db is None:
+            await self.connect()
+        update_data = self._serialize_datetime(update_data)
+        result = await self.db.partners.update_one({"id": partner_id}, {"$set": update_data})
+        return result.modified_count > 0
+
+    async def delete_partner(self, partner_id: str) -> bool:
+        if self.db is None:
+            await self.connect()
+        result = await self.db.partners.delete_one({"id": partner_id})
+        return result.deleted_count > 0
+
     async def create_client(self, client_data: Dict[str, Any]) -> Dict[str, Any]:
         if self.db is None:
             await self.connect()

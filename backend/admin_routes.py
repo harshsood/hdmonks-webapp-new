@@ -13,7 +13,10 @@ from models import (
     Testimonial, TestimonialCreate, TestimonialUpdate,
     ServicePackage, PackageCreate, PackageUpdate,
     EmailTemplate, TemplateCreate, TemplateUpdate,
-    SettingsUpdate
+    SettingsUpdate,
+    Partner, PartnerCreate, PartnerUpdate,
+    Client, ClientCreate, ClientUpdate,
+    ClientServiceCreate, ClientServiceUpdate
 )
 from database import database
 from admin_auth import verify_password, create_session, verify_session, delete_session
@@ -593,6 +596,187 @@ async def update_settings_admin(
         return {"success": True, "message": "Settings updated successfully", "data": updated_settings}
     except Exception as e:
         logger.error(f"Error updating settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== PARTNERS MANAGEMENT =====
+
+@admin_router.get("/partners")
+async def get_partners_admin(
+    category: Optional[str] = Query(None, description="Filter by category: execution or referral"),
+    session: dict = Depends(verify_admin_token)
+):
+    """Get all partners, optionally filtered by category"""
+    try:
+        if category:
+            if category not in ["execution", "referral"]:
+                raise HTTPException(status_code=400, detail="Category must be 'execution' or 'referral'")
+            partners = await database.get_partners_by_category(category)
+        else:
+            # Get all partners
+            execution_partners = await database.get_partners_by_category("execution")
+            referral_partners = await database.get_partners_by_category("referral")
+            partners = execution_partners + referral_partners
+        
+        return {"success": True, "data": partners}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching partners: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.post("/partners")
+async def create_partner_admin(
+    partner_create: PartnerCreate,
+    session: dict = Depends(verify_admin_token)
+):
+    """Create a new partner"""
+    try:
+        from admin_auth import hash_password
+        
+        partner_data = partner_create.dict()
+        partner_data["password_hash"] = hash_password(partner_data.pop("password"))
+        partner_data["created_at"] = datetime.utcnow().isoformat()
+        
+        created_partner = await database.create_partner(partner_data)
+        logger.info(f"Partner created: {created_partner['id']}")
+        return {"success": True, "data": created_partner}
+    except Exception as e:
+        logger.error(f"Error creating partner: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.put("/partners/{partner_id}")
+async def update_partner_admin(
+    partner_id: str,
+    partner_update: PartnerUpdate,
+    session: dict = Depends(verify_admin_token)
+):
+    """Update a partner"""
+    try:
+        update_data = {k: v for k, v in partner_update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+        
+        success = await database.update_partner(partner_id, update_data)
+        if not success:
+            raise HTTPException(status_code=404, detail="Partner not found")
+        
+        # Fetch and return the updated partner
+        updated_partner = await database.get_partner_by_id(partner_id)
+        logger.info(f"Partner updated: {partner_id}")
+        return {"success": True, "message": "Partner updated successfully", "data": updated_partner}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating partner: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.delete("/partners/{partner_id}")
+async def delete_partner_admin(
+    partner_id: str,
+    session: dict = Depends(verify_admin_token)
+):
+    """Delete a partner"""
+    try:
+        success = await database.delete_partner(partner_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Partner not found")
+        
+        logger.info(f"Partner deleted: {partner_id}")
+        return {"success": True, "message": "Partner deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting partner: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.get("/partners/{partner_id}/clients")
+async def get_partner_clients_admin(
+    partner_id: str,
+    session: dict = Depends(verify_admin_token)
+):
+    """Get all clients for a specific partner"""
+    try:
+        clients = await database.get_clients_by_partner(partner_id)
+        return {"success": True, "data": clients}
+    except Exception as e:
+        logger.error(f"Error fetching partner clients: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.post("/partners/{partner_id}/clients")
+async def create_client_admin(
+    partner_id: str,
+    client_create: ClientCreate,
+    session: dict = Depends(verify_admin_token)
+):
+    """Create a new client for a partner"""
+    try:
+        client_data = client_create.dict()
+        client_data["partner_id"] = partner_id
+        client_data["created_at"] = datetime.utcnow().isoformat()
+        client_data["updated_at"] = datetime.utcnow().isoformat()
+        
+        created_client = await database.create_client(client_data)
+        logger.info(f"Client created for partner {partner_id}: {created_client['id']}")
+        return {"success": True, "data": created_client}
+    except Exception as e:
+        logger.error(f"Error creating client: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.put("/partners/{partner_id}/clients/{client_id}")
+async def update_client_admin(
+    partner_id: str,
+    client_id: str,
+    client_update: ClientUpdate,
+    session: dict = Depends(verify_admin_token)
+):
+    """Update a client"""
+    try:
+        update_data = {k: v for k, v in client_update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+        
+        update_data["updated_at"] = datetime.utcnow().isoformat()
+        success = await database.update_client(partner_id, client_id, update_data)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Client not found")
+        
+        # Fetch and return the updated client
+        updated_client = await database.get_client_by_id(client_id)
+        logger.info(f"Client updated: {client_id}")
+        return {"success": True, "message": "Client updated successfully", "data": updated_client}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating client: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.delete("/partners/{partner_id}/clients/{client_id}")
+async def delete_client_admin(
+    partner_id: str,
+    client_id: str,
+    session: dict = Depends(verify_admin_token)
+):
+    """Delete a client"""
+    try:
+        success = await database.delete_client(partner_id, client_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Client not found")
+        
+        logger.info(f"Client deleted: {client_id}")
+        return {"success": True, "message": "Client deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting client: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -11,6 +11,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import ServicesManagement from "./pages/admin/ServicesManagement";
 import StagesManagement from "./pages/admin/StagesManagement";
+import PartnersManagement from "./pages/admin/PartnersManagement";
 import InquiriesManagement from "./pages/admin/InquiriesManagement";
 import BookingsManagement from "./pages/admin/BookingsManagement";
 import TimeSlotsManagement from "./pages/admin/TimeSlotsManagement";
@@ -54,6 +55,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="services" element={<ServicesManagement />} />
               <Route path="stages" element={<StagesManagement />} />
+              <Route path="partners" element={<PartnersManagement />} />
               <Route path="inquiries" element={<InquiriesManagement />} />
               <Route path="bookings" element={<BookingsManagement />} />
               <Route path="timeslots" element={<TimeSlotsManagement />} />

@@ -17,7 +17,8 @@ import {
   BarChart3,
   LogOut,
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 
@@ -31,6 +32,7 @@ const AdminLayout = () => {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/services', icon: Briefcase, label: 'Services' },
     { path: '/admin/stages', icon: Layers, label: 'Stages' },
+    { path: '/admin/partners', icon: Users, label: 'Partners' },
     { path: '/admin/inquiries', icon: Mail, label: 'Inquiries' },
     { path: '/admin/bookings', icon: Calendar, label: 'Bookings' },
     { path: '/admin/timeslots', icon: Clock, label: 'Time Slots' },

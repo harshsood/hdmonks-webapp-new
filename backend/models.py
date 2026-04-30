@@ -379,7 +379,25 @@ class Partner(BaseModel):
     password_hash: str
     name: Optional[str] = None
     phone: Optional[str] = None
+    category: str = "execution"  # execution or referral
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PartnerCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    category: str = "execution"
+
+
+class PartnerUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    category: Optional[str] = None
 
 
 class PartnerLogin(BaseModel):
