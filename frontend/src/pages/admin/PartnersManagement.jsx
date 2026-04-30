@@ -184,7 +184,9 @@ const PartnersManagement = () => {
         full_name: client.full_name,
         email: client.email || '',
         phone: client.phone || '',
-        company: client.company || ''        closed_cost: client.closed_cost || 0      });
+        company: client.company || '',
+        closed_cost: client.closed_cost || 0
+      });
     } else {
       setClientFormData({ full_name: '', email: '', phone: '', company: '', closed_cost: 0 });
       setEditingClient(null);
