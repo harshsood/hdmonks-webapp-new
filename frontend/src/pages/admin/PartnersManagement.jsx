@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Plus, Trash2, Edit, Users, User } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api/admin`;
@@ -62,7 +62,7 @@ const PartnersManagement = () => {
     try {
       const token = localStorage.getItem('admin_token');
       if (editingPartner) {
-        await axios.put(`${API}/partners/${editingPartner.id}`, partnerFormData, {
+        await axios.put(`${API}/partners/${getId(editingPartner)}`, partnerFormData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Partner updated');
@@ -85,19 +85,21 @@ const PartnersManagement = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('admin_token');
+      const partnerId = getId(selectedPartner);
+      const clientId = getId(editingClient);
       if (editingClient) {
-        await axios.put(`${API}/partners/${selectedPartner.id}/clients/${editingClient.id}`, clientFormData, {
+        await axios.put(`${API}/partners/${partnerId}/clients/${clientId}`, clientFormData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Client updated');
       } else {
-        await axios.post(`${API}/partners/${selectedPartner.id}/clients`, clientFormData, {
+        await axios.post(`${API}/partners/${partnerId}/clients`, clientFormData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Client added');
       }
       setIsClientModalOpen(false);
-      fetchClients(selectedPartner.id);
+      fetchClients(partnerId);
       setClientFormData({ full_name: '', email: '', phone: '', company: '' });
       setEditingClient(null);
     } catch (error) {
@@ -109,7 +111,7 @@ const PartnersManagement = () => {
     if (!confirm(`Delete partner ${partner.name || partner.username}?`)) return;
     try {
       const token = localStorage.getItem('admin_token');
-      await axios.delete(`${API}/partners/${partner.id}`, {
+      await axios.delete(`${API}/partners/${getId(partner)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Partner deleted');
@@ -123,11 +125,12 @@ const PartnersManagement = () => {
     if (!confirm(`Delete client ${client.full_name}?`)) return;
     try {
       const token = localStorage.getItem('admin_token');
-      await axios.delete(`${API}/partners/${selectedPartner.id}/clients/${client.id}`, {
+      const partnerId = getId(selectedPartner);
+      await axios.delete(`${API}/partners/${partnerId}/clients/${getId(client)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Client deleted');
-      fetchClients(selectedPartner.id);
+      fetchClients(partnerId);
     } catch (error) {
       toast.error('Failed to delete client');
     }
@@ -167,9 +170,11 @@ const PartnersManagement = () => {
     setIsClientModalOpen(true);
   };
 
+  const getId = (item) => item?.id || item?._id;
+
   const selectPartner = (partner) => {
     setSelectedPartner(partner);
-    fetchClients(partner.id);
+    fetchClients(getId(partner));
   };
 
   return (
@@ -192,7 +197,7 @@ const PartnersManagement = () => {
             {!selectedPartner || selectedPartner.category !== category ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {partners[category].map(partner => (
-                  <Card key={partner.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => selectPartner(partner)}>
+                  <Card key={getId(partner)} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => selectPartner(partner)}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <User className="h-5 w-5 text-orange-500" />
@@ -226,7 +231,7 @@ const PartnersManagement = () => {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {clients.map(client => (
-                    <Card key={client.id} className="p-4">
+                    <Card key={getId(client)} className="p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <Users className="h-5 w-5 text-blue-500" />
@@ -358,6 +363,7 @@ const PartnersManagement = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <Toaster position="top-right" richColors />
     </div>
   );
 };

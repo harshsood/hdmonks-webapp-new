@@ -6,6 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 import base64
 import io
+import uuid
 
 from models import (
     AdminLogin, Blog, BlogCreate, BlogUpdate,
@@ -636,6 +637,7 @@ async def create_partner_admin(
         from admin_auth import hash_password
         
         partner_data = partner_create.dict()
+        partner_data["id"] = str(uuid.uuid4())
         partner_data["password_hash"] = hash_password(partner_data.pop("password"))
         partner_data["created_at"] = datetime.utcnow().isoformat()
         
@@ -717,6 +719,7 @@ async def create_client_admin(
     """Create a new client for a partner"""
     try:
         client_data = client_create.dict()
+        client_data["id"] = str(uuid.uuid4())
         client_data["partner_id"] = partner_id
         client_data["created_at"] = datetime.utcnow().isoformat()
         client_data["updated_at"] = datetime.utcnow().isoformat()
