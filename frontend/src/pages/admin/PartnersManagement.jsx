@@ -57,6 +57,8 @@ const PartnersManagement = () => {
     }
   };
 
+  const getId = (item) => item?.id || item?._id;
+
   const handlePartnerSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -169,8 +171,6 @@ const PartnersManagement = () => {
     }
     setIsClientModalOpen(true);
   };
-
-  const getId = (item) => item?.id || item?._id;
 
   const selectPartner = (partner) => {
     setSelectedPartner(partner);
