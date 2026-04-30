@@ -578,7 +578,7 @@ class Database:
             await self.connect()
         update_data = self._serialize_datetime(update_data)
         result = await self.db.partners.update_one({"id": partner_id}, {"$set": update_data})
-        return result.modified_count > 0
+        return result.matched_count > 0
 
     async def delete_partner(self, partner_id: str) -> bool:
         if self.db is None:
@@ -608,7 +608,7 @@ class Database:
             await self.connect()
         update_data = self._serialize_datetime(update_data)
         result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$set": update_data})
-        return result.modified_count > 0
+        return result.matched_count > 0
 
     async def delete_client(self, partner_id: str, client_id: str) -> bool:
         if self.db is None:

@@ -380,6 +380,9 @@ class Partner(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     category: str = "execution"  # execution or referral
+    company: Optional[str] = None
+    address: Optional[str] = None
+    bio: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -390,6 +393,9 @@ class PartnerCreate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     category: str = "execution"
+    company: Optional[str] = None
+    address: Optional[str] = None
+    bio: Optional[str] = None
 
 
 class PartnerUpdate(BaseModel):
@@ -398,6 +404,9 @@ class PartnerUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     category: Optional[str] = None
+    company: Optional[str] = None
+    address: Optional[str] = None
+    bio: Optional[str] = None
 
 
 class PartnerLogin(BaseModel):

@@ -5,7 +5,7 @@ import logging
 import uuid
 
 from models import (
-    PartnerLogin, ClientCreate, ClientUpdate,
+    PartnerLogin, PartnerUpdate, ClientCreate, ClientUpdate,
     ClientServiceCreate
 )
 from database import database
@@ -38,7 +38,8 @@ async def partner_login(credentials: PartnerLogin):
         if not _verify(credentials.password, partner["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         session = create_session(partner["id"], partner["username"])
-        return {"success": True, "token": session["token"], "partner": {"username": partner["username"]}}
+        partner_data = {k: v for k, v in partner.items() if k != "password_hash"}
+        return {"success": True, "token": session["token"], "partner": partner_data}
     except HTTPException:
         raise
     except Exception as e:
@@ -91,7 +92,53 @@ async def partner_register(payload: dict):
 
 @partner_router.get("/verify")
 async def verify_partner(session: dict = Depends(verify_partner_token)):
-    return {"success": True, "partner": {"username": session['username']}}
+    try:
+        partner = await database.get_partner_by_id(session["partner_id"])
+        if not partner:
+            raise HTTPException(status_code=404, detail="Partner not found")
+        partner_data = {k: v for k, v in partner.items() if k != "password_hash"}
+        return {"success": True, "partner": partner_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying partner: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@partner_router.get("/profile")
+async def get_partner_profile(session: dict = Depends(verify_partner_token)):
+    try:
+        partner = await database.get_partner_by_id(session["partner_id"])
+        if not partner:
+            raise HTTPException(status_code=404, detail="Partner not found")
+        partner_data = {k: v for k, v in partner.items() if k != "password_hash"}
+        return {"success": True, "data": partner_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching partner profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@partner_router.put("/profile")
+async def update_partner_profile(partner_update: PartnerUpdate, session: dict = Depends(verify_partner_token)):
+    try:
+        update_data = {k: v for k, v in partner_update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+
+        success = await database.update_partner(session["partner_id"], update_data)
+        if not success:
+            raise HTTPException(status_code=404, detail="Partner not found")
+
+        partner = await database.get_partner_by_id(session["partner_id"])
+        partner_data = {k: v for k, v in partner.items() if k != "password_hash"}
+        return {"success": True, "data": partner_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating partner profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @partner_router.get("/clients")

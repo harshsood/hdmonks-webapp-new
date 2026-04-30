@@ -12,13 +12,33 @@ const PartnerProfile = () => {
     name: partner?.name || '',
     email: partner?.email || '',
     phone: partner?.phone || '',
-    company: '',
-    address: '',
-    bio: ''
+    category: partner?.category || 'execution',
+    company: partner?.company || '',
+    address: partner?.address || '',
+    bio: partner?.bio || ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('partner_token');
+        if (!token) return;
+        const response = await axios.get(`${BACKEND}/api/partner/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setProfile(prev => ({ ...prev, ...response.data.data }));
+        }
+      } catch (error) {
+        console.error('Failed to load partner profile:', error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,13 +48,15 @@ const PartnerProfile = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      // In a real app, would POST to backend to update partner profile
-      localStorage.setItem('partner_profile', JSON.stringify(profile));
+      const token = localStorage.getItem('partner_token');
+      await axios.put(`${BACKEND}/api/partner/profile`, profile, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error(err);
+      console.error('Error saving profile:', err);
     } finally {
       setLoading(false);
     }
@@ -92,6 +114,21 @@ const PartnerProfile = () => {
               disabled={!isEditing}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
             />
+          </div>
+
+          {/* Partner Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Partner Type</label>
+            <select
+              name="category"
+              value={profile.category}
+              onChange={handleChange}
+              disabled={!isEditing}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white disabled:bg-gray-50"
+            >
+              <option value="execution">Execution Partner</option>
+              <option value="referral">Referral Partner</option>
+            </select>
           </div>
 
           {/* Phone */}
