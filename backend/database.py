@@ -654,6 +654,19 @@ class Database:
         item = res[0]
         return {"total_revenue": item.get("total_revenue", 0), "by_client": item.get("by_client", [])}
 
+    async def get_closed_cost_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        pipeline = [
+            {"$match": {"partner_id": partner_id}},
+            {"$group": {"_id": "$id", "client_name": {"$first": "$full_name"}, "client_total": {"$sum": {"$ifNull": ["$closed_cost", 0]}}}},
+            {"$group": {"_id": None, "total_revenue": {"$sum": "$client_total"}, "by_client": {"$push": {"client_id": "$_id", "client_name": "$client_name", "amount": "$client_total"}}}}
+        ]
+        res = await self.db.clients.aggregate(pipeline).to_list(1)
+        if not res:
+            return {"total_revenue": 0, "by_client": []}
+        item = res[0]
+        return {"total_revenue": item.get("total_revenue", 0), "by_client": item.get("by_client", [])}
 
 # Import here to avoid circular import
 from typing import Dict, Any

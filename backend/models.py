@@ -430,6 +430,7 @@ class Client(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     company: Optional[str] = None
+    closed_cost: Optional[float] = 0.0
     services: List[ClientService] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -440,6 +441,7 @@ class ClientCreate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     company: Optional[str] = None
+    closed_cost: Optional[float] = 0.0
 
 
 class ClientUpdate(BaseModel):
@@ -447,6 +449,7 @@ class ClientUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     company: Optional[str] = None
+    closed_cost: Optional[float] = None
 
 
 class ClientServiceCreate(BaseModel):

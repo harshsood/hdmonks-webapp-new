@@ -44,7 +44,7 @@ const Dashboard = () => {
         <Card className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+              <p className="text-sm font-medium text-gray-600">Tentative Cost</p>
               <p className="text-3xl font-bold mt-2 text-green-600">₹{summary?.total_revenue ?? 0}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">

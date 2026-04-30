@@ -14,15 +14,18 @@ const PartnersManagement = () => {
   const [partners, setPartners] = useState({ execution: [], referral: [] });
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [clients, setClients] = useState([]);
+  const [partnerRevenues, setPartnerRevenues] = useState({});
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState(null);
   const [editingClient, setEditingClient] = useState(null);
+  const [selectedClientForSplits, setSelectedClientForSplits] = useState(null);
+  const [isSplitsModalOpen, setIsSplitsModalOpen] = useState(false);
   const [partnerFormData, setPartnerFormData] = useState({
     username: '', email: '', password: '', name: '', phone: '', category: 'execution'
   });
   const [clientFormData, setClientFormData] = useState({
-    full_name: '', email: '', phone: '', company: ''
+    full_name: '', email: '', phone: '', company: '', closed_cost: 0
   });
 
   useEffect(() => {
@@ -40,6 +43,24 @@ const PartnersManagement = () => {
         execution: executionRes.data.data || [],
         referral: referralRes.data.data || []
       });
+      
+      // Fetch revenue for all partners
+      const allPartners = [...(executionRes.data.data || []), ...(referralRes.data.data || [])];
+      const revenuePromises = allPartners.map(async (partner) => {
+        try {
+          const revenueRes = await axios.get(`${API}/partners/${getId(partner)}/revenue`, { headers: { Authorization: `Bearer ${token}` } });
+          return { partnerId: getId(partner), revenue: revenueRes.data.data?.total_revenue || 0 };
+        } catch (error) {
+          return { partnerId: getId(partner), revenue: 0 };
+        }
+      });
+      
+      const revenues = await Promise.all(revenuePromises);
+      const revenueMap = {};
+      revenues.forEach(({ partnerId, revenue }) => {
+        revenueMap[partnerId] = revenue;
+      });
+      setPartnerRevenues(revenueMap);
     } catch (error) {
       toast.error('Failed to load partners');
     }
@@ -102,7 +123,7 @@ const PartnersManagement = () => {
       }
       setIsClientModalOpen(false);
       fetchClients(partnerId);
-      setClientFormData({ full_name: '', email: '', phone: '', company: '' });
+      setClientFormData({ full_name: '', email: '', phone: '', company: '', closed_cost: 0 });
       setEditingClient(null);
     } catch (error) {
       toast.error('Failed to save client');
@@ -163,10 +184,9 @@ const PartnersManagement = () => {
         full_name: client.full_name,
         email: client.email || '',
         phone: client.phone || '',
-        company: client.company || ''
-      });
+        company: client.company || ''        closed_cost: client.closed_cost || 0      });
     } else {
-      setClientFormData({ full_name: '', email: '', phone: '', company: '' });
+      setClientFormData({ full_name: '', email: '', phone: '', company: '', closed_cost: 0 });
       setEditingClient(null);
     }
     setIsClientModalOpen(true);
@@ -214,6 +234,9 @@ const PartnersManagement = () => {
                     </div>
                     <p className="text-sm text-gray-600">{partner.email}</p>
                     {partner.phone && <p className="text-sm text-gray-600">{partner.phone}</p>}
+                    <p className="text-sm font-semibold text-green-600 mt-1">
+                      Total Revenue: ₹{partnerRevenues[getId(partner)] || 0}
+                    </p>
                   </Card>
                 ))}
               </div>
@@ -249,6 +272,19 @@ const PartnersManagement = () => {
                       {client.email && <p className="text-sm text-gray-600">{client.email}</p>}
                       {client.phone && <p className="text-sm text-gray-600">{client.phone}</p>}
                       {client.company && <p className="text-sm text-gray-600">{client.company}</p>}
+                      {client.closed_cost && client.closed_cost > 0 && (
+                        <p className="text-sm text-gray-600">
+                          Closed Cost: <span 
+                            className="font-semibold text-green-600 cursor-pointer hover:underline"
+                            onClick={() => {
+                              setSelectedClientForSplits(client);
+                              setIsSplitsModalOpen(true);
+                            }}
+                          >
+                            ₹{client.closed_cost}
+                          </span>
+                        </p>
+                      )}
                     </Card>
                   ))}
                 </div>
@@ -357,12 +393,54 @@ const PartnersManagement = () => {
               onChange={e => setClientFormData({...clientFormData, company: e.target.value})}
               className="w-full px-3 py-2 border rounded-lg"
             />
+            <input
+              type="number"
+              placeholder="Closed Cost"
+              value={clientFormData.closed_cost}
+              onChange={e => setClientFormData({...clientFormData, closed_cost: parseFloat(e.target.value) || 0})}
+              className="w-full px-3 py-2 border rounded-lg"
+              step="0.01"
+            />
             <Button type="submit" className="w-full bg-orange-500">
               {editingClient ? 'Update Client' : 'Add Client'}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Revenue Splits Modal */}
+      <Dialog open={isSplitsModalOpen} onOpenChange={setIsSplitsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revenue Distribution - {selectedClientForSplits?.full_name}</DialogTitle>
+          </DialogHeader>
+          {selectedClientForSplits && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-lg font-semibold">Closed Cost: ₹{selectedClientForSplits.closed_cost}</p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="font-medium">Referral Partner (10%):</span>
+                  <span className="font-bold text-blue-600">₹{(selectedClientForSplits.closed_cost * 0.1).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="font-medium">Execution Partner (70%):</span>
+                  <span className="font-bold text-green-600">₹{(selectedClientForSplits.closed_cost * 0.7).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                  <span className="font-medium">HD Monks (20%):</span>
+                  <span className="font-bold text-orange-600">₹{(selectedClientForSplits.closed_cost * 0.2).toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="text-center text-sm text-gray-600 mt-4">
+                Distribution based on the Closed Cost amount
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Toaster position="top-right" richColors />
     </div>
   );

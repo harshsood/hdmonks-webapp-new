@@ -783,6 +783,20 @@ async def delete_client_admin(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@admin_router.get("/partners/{partner_id}/revenue")
+async def get_partner_revenue_admin(
+    partner_id: str,
+    session: dict = Depends(verify_admin_token)
+):
+    """Get revenue summary for a specific partner"""
+    try:
+        summary = await database.get_closed_cost_revenue_by_partner(partner_id)
+        return {"success": True, "data": summary}
+    except Exception as e:
+        logger.error(f"Error fetching partner revenue: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ===== ANALYTICS =====
 
 @admin_router.get("/analytics")
