@@ -416,30 +416,46 @@ const PartnersManagement = () => {
           <DialogHeader>
             <DialogTitle>Revenue Distribution - {selectedClientForSplits?.full_name}</DialogTitle>
           </DialogHeader>
-          {selectedClientForSplits && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-lg font-semibold">Closed Cost: ₹{selectedClientForSplits.closed_cost}</p>
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="font-medium">Referral Partner (10%):</span>
-                  <span className="font-bold text-blue-600">₹{(selectedClientForSplits.closed_cost * 0.1).toFixed(2)}</span>
+          {selectedClientForSplits && (() => {
+            const tentativeCost = (selectedClientForSplits.services || []).reduce(
+              (sum, service) => sum + (parseFloat(service.price) || 0),
+              0
+            );
+            const referralShare = tentativeCost * 0.1;
+            const executionShare = tentativeCost * 0.8;
+            const hdMonksShare = tentativeCost * 0.1;
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                  <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
+                    <p className="text-sm text-gray-500">Closed Cost</p>
+                    <p className="text-2xl font-semibold text-gray-900">₹{selectedClientForSplits.closed_cost}</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
+                    <p className="text-sm text-gray-500">Tentative Cost</p>
+                    <p className="text-2xl font-semibold text-orange-600">₹{tentativeCost.toFixed(2)}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="font-medium">Execution Partner (70%):</span>
-                  <span className="font-bold text-green-600">₹{(selectedClientForSplits.closed_cost * 0.7).toFixed(2)}</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span className="font-medium">Referral Partner (10%):</span>
+                    <span className="font-bold text-blue-600">₹{referralShare.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="font-medium">Execution Partner (80%):</span>
+                    <span className="font-bold text-green-600">₹{executionShare.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                    <span className="font-medium">HD Monks (10%):</span>
+                    <span className="font-bold text-orange-600">₹{hdMonksShare.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                  <span className="font-medium">HD Monks (20%):</span>
-                  <span className="font-bold text-orange-600">₹{(selectedClientForSplits.closed_cost * 0.2).toFixed(2)}</span>
+                <div className="text-center text-sm text-gray-600 mt-4">
+                  Distribution based on the Tentative Cost amount
                 </div>
               </div>
-              <div className="text-center text-sm text-gray-600 mt-4">
-                Distribution based on the Closed Cost amount
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
