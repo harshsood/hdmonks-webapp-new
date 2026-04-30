@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -28,11 +28,7 @@ const PartnersManagement = () => {
     full_name: '', email: '', phone: '', company: '', closed_cost: 0
   });
 
-  useEffect(() => {
-    fetchPartners();
-  }, []);
-
-  const fetchPartners = async () => {
+  const fetchPartners = useCallback(async () => {
     try {
       const token = localStorage.getItem('admin_token');
       const [executionRes, referralRes] = await Promise.all([
@@ -64,7 +60,11 @@ const PartnersManagement = () => {
     } catch (error) {
       toast.error('Failed to load partners');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPartners();
+  }, [fetchPartners]);
 
   const fetchClients = async (partnerId) => {
     try {
