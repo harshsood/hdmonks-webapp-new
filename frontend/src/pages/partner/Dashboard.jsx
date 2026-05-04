@@ -122,45 +122,8 @@ const Dashboard = () => {
         <Card className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-600">Total Income</p>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button type="button" className="text-gray-400 hover:text-gray-700">
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-3">
-                    <p className="text-sm font-semibold text-gray-900">Income split details</p>
-                    <p className="text-sm text-gray-700 mt-2">Split of total revenue across referral, execution and admin shares.</p>
-                    <div className="mt-3 space-y-2 text-sm text-gray-700">
-                      <div className="flex justify-between">
-                        <span>Referral Partner (10%)</span>
-                        <span className="font-semibold">{formatCurrency((summary?.total_revenue ?? 0) * 0.1)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Execution Partner (80%)</span>
-                        <span className="font-semibold">{formatCurrency((summary?.total_revenue ?? 0) * 0.8)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Admin (10%)</span>
-                        <span className="font-semibold">{formatCurrency((summary?.total_revenue ?? 0) * 0.1)}</span>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <p className="text-sm font-medium text-gray-600">Total Income</p>
               <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</p>
-              <div className="mt-3 text-sm text-gray-600 space-y-1">
-                <div className="flex justify-between">
-                  <span>Your share</span>
-                  <span className="font-semibold">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Admin share</span>
-                  <span className="font-semibold">{formatCurrency((summary?.total_revenue ?? 0) * 0.1)}</span>
-                </div>
-              </div>
             </div>
             <div className="p-3 bg-teal-100 rounded-full">
               <DollarSign className="h-8 w-8 text-teal-600" />
