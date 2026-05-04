@@ -262,9 +262,7 @@ const PartnersManagement = () => {
                     </div>
                     <p className="text-sm text-gray-600">{partner.email}</p>
                     {partner.phone && <p className="text-sm text-gray-600">{partner.phone}</p>}
-                    <p className="text-sm font-semibold text-green-600 mt-1">
-                      Total Revenue: ₹{partnerRevenues[getId(partner)] || 0}
-                    </p>
+                    <p className="text-2xl font-bold text-green-600 mt-1">₹{partnerRevenues[getId(partner)] || 0}</p>
                   </Card>
                 ))}
               </div>
