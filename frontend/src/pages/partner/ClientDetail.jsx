@@ -74,7 +74,7 @@ const ClientDetail = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `receipt-${selectedServiceForReceipt?.service_id || selectedServiceForReceipt?.id || 'unknown'}.html`;
+    a.download = `receipt-${selectedServiceForReceipt?.id || 'unknown'}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -196,7 +196,7 @@ const ClientDetail = () => {
         {client?.services && client.services.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {client?.services?.map(s => (
-              <Card key={s.service_id || s.id} className="p-6 hover:shadow-lg transition-shadow">
+              <Card key={s.id} className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-900">{s.service_name || s.service_id}</h3>
@@ -218,15 +218,13 @@ const ClientDetail = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => generateReceipt(s)}
-                    type="button"
                     className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
                   >
                     <FileText className="h-4 w-4" />
                     <span>Receipt</span>
                   </button>
                   <button
-                    onClick={() => removeService(s.service_id || s.id)}
-                    type="button"
+                    onClick={() => removeService(s.id)}
                     className="flex items-center justify-center space-x-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />

@@ -72,10 +72,22 @@ const Dashboard = () => {
         <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
           <div className="flex items-center justify-between h-full">
             <div>
+              <p className="text-sm font-medium text-gray-600">Tentative Cost</p>
+              <p className="text-3xl font-bold mt-2 text-green-600">{formatCurrency(summary?.total_revenue ?? 0)}</p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-full flex-shrink-0">
+              <DollarSign className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
+          <div className="flex items-center justify-between h-full">
+            <div>
               <p className="text-sm font-medium text-gray-600">Active Clients</p>
               <p className="text-3xl font-bold mt-2 text-blue-600">{summary?.by_client?.length ?? 0}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-full flex-shrink-0 overflow-hidden">
+            <div className="p-3 bg-blue-100 rounded-full flex-shrink-0">
               <Users className="h-8 w-8 text-blue-600" />
             </div>
           </div>
@@ -89,7 +101,7 @@ const Dashboard = () => {
                 {formatCurrency(summary?.by_client?.length > 0 ? summary?.total_revenue / summary?.by_client?.length : 0)}
               </p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-full flex-shrink-0 overflow-hidden">
+            <div className="p-3 bg-purple-100 rounded-full flex-shrink-0">
               <TrendingUp className="h-8 w-8 text-purple-600" />
             </div>
           </div>
@@ -101,7 +113,7 @@ const Dashboard = () => {
               <p className="text-sm font-medium text-gray-600">Total Clients</p>
               <p className="text-3xl font-bold mt-2 text-orange-600">{summary?.by_client?.length ?? 0}</p>
             </div>
-            <div className="p-3 bg-orange-100 rounded-full flex-shrink-0 overflow-hidden">
+            <div className="p-3 bg-orange-100 rounded-full flex-shrink-0">
               <FileText className="h-8 w-8 text-orange-600" />
             </div>
           </div>
@@ -113,7 +125,7 @@ const Dashboard = () => {
               <p className="text-sm font-medium text-gray-600">Total Income</p>
               <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</p>
             </div>
-            <div className="p-3 bg-teal-100 rounded-full flex-shrink-0 overflow-hidden">
+            <div className="p-3 bg-teal-100 rounded-full flex-shrink-0">
               <DollarSign className="h-8 w-8 text-teal-600" />
             </div>
           </div>

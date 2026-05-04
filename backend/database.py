@@ -620,8 +620,6 @@ class Database:
         if self.db is None:
             await self.connect()
         service_data = self._serialize_datetime(service_data)
-        if "service_id" in service_data and "id" not in service_data:
-            service_data["id"] = service_data["service_id"]
         result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$push": {"services": service_data}})
         if result.modified_count > 0:
             return await self.get_client_by_id(client_id)
@@ -632,19 +630,13 @@ class Database:
             await self.connect()
         update_data = self._serialize_datetime(update_data)
         set_query = {f"services.$.{k}": v for k, v in update_data.items()}
-        result = await self.db.clients.update_one(
-            {"id": client_id, "partner_id": partner_id, "$or": [{"services.id": service_id}, {"services.service_id": service_id}]},
-            {"$set": set_query}
-        )
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
         return result.modified_count > 0
 
     async def delete_client_service(self, partner_id: str, client_id: str, service_id: str) -> bool:
         if self.db is None:
             await self.connect()
-        result = await self.db.clients.update_one(
-            {"id": client_id, "partner_id": partner_id},
-            {"$pull": {"services": {"$or": [{"id": service_id}, {"service_id": service_id}]}}}
-        )
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$pull": {"services": {"id": service_id}}})
         return result.modified_count > 0
 
     async def get_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
