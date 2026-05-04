@@ -2,16 +2,44 @@ import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { usePartnerAuth } from '../../contexts/PartnerAuthContext';
 import { Card } from '../../components/ui/card';
+import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, FileText, DollarSign, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, FileText, DollarSign, AlertCircle, Info } from 'lucide-react';
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 const Dashboard = () => {
-  const { token } = usePartnerAuth();
+  const { token, partner } = usePartnerAuth();
   const [summary, setSummary] = useState(null);
 
   const [loading, setLoading] = useState(true);
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount || 0);
+
+  const getPartnerSharePercent = (category) => {
+    const normalized = (category || '').toLowerCase();
+    if (normalized.includes('both')) return 0.9;
+    if (normalized.includes('execution')) return 0.8;
+    if (normalized.includes('referral')) return 0.1;
+    return 0.8;
+  };
+
+  const getPartnerShareLabel = (category) => {
+    const normalized = (category || '').toLowerCase();
+    if (normalized.includes('both')) return 'Referral + Execution Share';
+    if (normalized.includes('execution')) return 'Execution Partner Share';
+    if (normalized.includes('referral')) return 'Referral Partner Share';
+    return 'Execution Partner Share';
+  };
+
+  const partnerSharePercent = getPartnerSharePercent(partner?.category);
+  const partnerShareLabel = getPartnerShareLabel(partner?.category);
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -40,12 +68,12 @@ const Dashboard = () => {
         <p className="text-gray-600 mt-1">Monitor your business performance and revenue</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Tentative Cost</p>
-              <p className="text-3xl font-bold mt-2 text-green-600">₹{summary?.total_revenue ?? 0}</p>
+              <p className="text-3xl font-bold mt-2 text-green-600">{formatCurrency(summary?.total_revenue ?? 0)}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
               <DollarSign className="h-8 w-8 text-green-600" />
@@ -70,7 +98,7 @@ const Dashboard = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Avg. Per Client</p>
               <p className="text-3xl font-bold mt-2 text-purple-600">
-                ₹{summary?.by_client?.length > 0 ? Math.round(summary?.total_revenue / summary?.by_client?.length) : 0}
+                {formatCurrency(summary?.by_client?.length > 0 ? summary?.total_revenue / summary?.by_client?.length : 0)}
               </p>
             </div>
             <div className="p-3 bg-purple-100 rounded-full">
@@ -87,6 +115,41 @@ const Dashboard = () => {
             </div>
             <div className="p-3 bg-orange-100 rounded-full">
               <FileText className="h-8 w-8 text-orange-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-600">Total Income</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="text-gray-400 hover:text-gray-700">
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-3">
+                    <p className="text-sm font-semibold text-gray-900">Income share details</p>
+                    <p className="text-sm text-gray-700 mt-2">This value is calculated from all services for your partner account using your category share.</p>
+                    <div className="mt-3 space-y-2 text-sm text-gray-700">
+                      <div className="flex justify-between">
+                        <span>{partnerShareLabel}:</span>
+                        <span className="font-semibold">{Math.round(partnerSharePercent * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Admin share</span>
+                        <span className="font-semibold">{formatCurrency((summary?.total_revenue ?? 0) * (1 - partnerSharePercent))}</span>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</p>
+            </div>
+            <div className="p-3 bg-teal-100 rounded-full">
+              <DollarSign className="h-8 w-8 text-teal-600" />
             </div>
           </div>
         </Card>

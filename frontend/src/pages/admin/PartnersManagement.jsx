@@ -4,7 +4,8 @@ import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Plus, Trash2, Edit, Users, User } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover';
+import { Plus, Trash2, Edit, Users, User, Info } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -79,6 +80,28 @@ const PartnersManagement = () => {
   };
 
   const getId = (item) => item?.id || item?._id;
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount || 0);
+
+  const getClientClosedCost = (client) => {
+    const serviceTotal = (client.services || []).reduce(
+      (sum, service) => sum + (parseFloat(service.price) || 0),
+      0
+    );
+    return client?.closed_cost > 0 ? client.closed_cost : serviceTotal > 0 ? serviceTotal : 0;
+  };
+
+  const getClosedCostSplits = (amount) => ({
+    referralShare: amount * 0.1,
+    executionShare: amount * 0.8,
+    adminShare: amount * 0.1,
+  });
 
   const handlePartnerSubmit = async (e) => {
     e.preventDefault();
@@ -274,19 +297,46 @@ const PartnersManagement = () => {
                       {client.email && <p className="text-sm text-gray-600">{client.email}</p>}
                       {client.phone && <p className="text-sm text-gray-600">{client.phone}</p>}
                       {client.company && <p className="text-sm text-gray-600">{client.company}</p>}
-                      {client.closed_cost && client.closed_cost > 0 && (
-                        <p className="text-sm text-gray-600">
-                          Closed Cost: <span 
-                            className="font-semibold text-green-600 cursor-pointer hover:underline"
-                            onClick={() => {
-                              setSelectedClientForSplits(client);
-                              setIsSplitsModalOpen(true);
-                            }}
-                          >
-                            ₹{client.closed_cost}
-                          </span>
-                        </p>
-                      )}
+                      {(() => {
+                        const clientClosedCost = getClientClosedCost(client);
+                        if (clientClosedCost <= 0) return null;
+                        const { referralShare, executionShare, adminShare } = getClosedCostSplits(clientClosedCost);
+                        return (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <span>Closed Cost:</span>
+                            <span className="font-semibold text-green-600">{formatCurrency(clientClosedCost)}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                >
+                                  <Info className="h-4 w-4" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-72 p-3">
+                                <div className="space-y-2">
+                                  <p className="text-sm font-semibold text-gray-900">Split breakdown</p>
+                                  <div className="space-y-2 text-sm text-gray-700">
+                                    <div className="flex justify-between">
+                                      <span>Referral Partner (10%)</span>
+                                      <span className="font-semibold text-blue-600">{formatCurrency(referralShare)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Execution Partner (80%)</span>
+                                      <span className="font-semibold text-green-600">{formatCurrency(executionShare)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Admin (10%)</span>
+                                      <span className="font-semibold text-orange-600">{formatCurrency(adminShare)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        );
+                      })()}
                     </Card>
                   ))}
                 </div>
@@ -421,37 +471,38 @@ const PartnersManagement = () => {
               (sum, service) => sum + (parseFloat(service.price) || 0),
               0
             );
-            const referralShare = tentativeCost * 0.1;
-            const executionShare = tentativeCost * 0.8;
-            const hdMonksShare = tentativeCost * 0.1;
+            const closedCostAmount = selectedClientForSplits.closed_cost > 0 ? selectedClientForSplits.closed_cost : tentativeCost;
+            const { referralShare, executionShare, adminShare } = getClosedCostSplits(closedCostAmount);
             return (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                   <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
                     <p className="text-sm text-gray-500">Closed Cost</p>
-                    <p className="text-2xl font-semibold text-gray-900">₹{selectedClientForSplits.closed_cost}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{formatCurrency(closedCostAmount)}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
-                    <p className="text-sm text-gray-500">Tentative Cost</p>
-                    <p className="text-2xl font-semibold text-orange-600">₹{tentativeCost.toFixed(2)}</p>
-                  </div>
+                  {selectedClientForSplits.closed_cost <= 0 && tentativeCost > 0 && (
+                    <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
+                      <p className="text-sm text-gray-500">Service Total</p>
+                      <p className="text-2xl font-semibold text-orange-600">{formatCurrency(tentativeCost)}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                    <span className="font-medium">Referral Partner (10%):</span>
-                    <span className="font-bold text-blue-600">₹{referralShare.toFixed(2)}</span>
+                    <span className="font-medium">Referral Partner (10%)</span>
+                    <span className="font-bold text-blue-600">{formatCurrency(referralShare)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="font-medium">Execution Partner (80%):</span>
-                    <span className="font-bold text-green-600">₹{executionShare.toFixed(2)}</span>
+                    <span className="font-medium">Execution Partner (80%)</span>
+                    <span className="font-bold text-green-600">{formatCurrency(executionShare)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                    <span className="font-medium">HD Monks (10%):</span>
-                    <span className="font-bold text-orange-600">₹{hdMonksShare.toFixed(2)}</span>
+                    <span className="font-medium">HD Monks (10%)</span>
+                    <span className="font-bold text-orange-600">{formatCurrency(adminShare)}</span>
                   </div>
                 </div>
                 <div className="text-center text-sm text-gray-600 mt-4">
-                  Distribution based on the Tentative Cost amount
+                  Distribution based on the closed cost amount
                 </div>
               </div>
             );
