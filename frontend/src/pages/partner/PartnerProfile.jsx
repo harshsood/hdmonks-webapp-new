@@ -128,6 +128,7 @@ const PartnerProfile = () => {
             >
               <option value="execution">Execution Partner</option>
               <option value="referral">Referral Partner</option>
+              <option value="both">Both Referral and Execution Partner</option>
             </select>
           </div>
 

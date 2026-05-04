@@ -12,7 +12,7 @@ const ClientDetail = () => {
   const navigate = useNavigate();
   const { token } = usePartnerAuth();
   const [client, setClient] = useState(null);
-  const [serviceForm, setServiceForm] = useState({ service_id: '', service_name: '', price: '' });
+  const [serviceForm, setServiceForm] = useState({ service_name: '', price: '' });
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedServiceForReceipt, setSelectedServiceForReceipt] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,10 +38,14 @@ const ClientDetail = () => {
   const addService = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${BACKEND}/api/partner/clients/${clientId}/services`, serviceForm, {
+      const serviceData = {
+        ...serviceForm,
+        service_id: serviceForm.service_id || `svc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+      };
+      await axios.post(`${BACKEND}/api/partner/clients/${clientId}/services`, serviceData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setServiceForm({ service_id: '', service_name: '', price: '' });
+      setServiceForm({ service_name: '', price: '' });
       fetch();
     } catch (e) {
       console.error(e);
@@ -243,16 +247,7 @@ const ClientDetail = () => {
           <span>Add New Service</span>
         </h2>
         <form onSubmit={addService} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Service ID</label>
-              <input
-                value={serviceForm.service_id}
-                onChange={e => setServiceForm({ ...serviceForm, service_id: e.target.value })}
-                placeholder="e.g., SRV001"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
               <input

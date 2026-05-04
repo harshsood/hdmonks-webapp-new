@@ -68,64 +68,64 @@ const Dashboard = () => {
         <p className="text-gray-600 mt-1">Monitor your business performance and revenue</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
+          <div className="flex items-center justify-between h-full">
             <div>
               <p className="text-sm font-medium text-gray-600">Tentative Cost</p>
               <p className="text-3xl font-bold mt-2 text-green-600">{formatCurrency(summary?.total_revenue ?? 0)}</p>
             </div>
-            <div className="p-3 bg-green-100 rounded-full">
+            <div className="p-3 bg-green-100 rounded-full flex-shrink-0">
               <DollarSign className="h-8 w-8 text-green-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
+          <div className="flex items-center justify-between h-full">
             <div>
               <p className="text-sm font-medium text-gray-600">Active Clients</p>
               <p className="text-3xl font-bold mt-2 text-blue-600">{summary?.by_client?.length ?? 0}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-full">
+            <div className="p-3 bg-blue-100 rounded-full flex-shrink-0">
               <Users className="h-8 w-8 text-blue-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
+          <div className="flex items-center justify-between h-full">
             <div>
               <p className="text-sm font-medium text-gray-600">Avg. Per Client</p>
               <p className="text-3xl font-bold mt-2 text-purple-600">
                 {formatCurrency(summary?.by_client?.length > 0 ? summary?.total_revenue / summary?.by_client?.length : 0)}
               </p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-full">
+            <div className="p-3 bg-purple-100 rounded-full flex-shrink-0">
               <TrendingUp className="h-8 w-8 text-purple-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
+          <div className="flex items-center justify-between h-full">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Clients</p>
               <p className="text-3xl font-bold mt-2 text-orange-600">{summary?.by_client?.length ?? 0}</p>
             </div>
-            <div className="p-3 bg-orange-100 rounded-full">
+            <div className="p-3 bg-orange-100 rounded-full flex-shrink-0">
               <FileText className="h-8 w-8 text-orange-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
+          <div className="flex items-center justify-between h-full">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Income</p>
               <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</p>
             </div>
-            <div className="p-3 bg-teal-100 rounded-full">
+            <div className="p-3 bg-teal-100 rounded-full flex-shrink-0">
               <DollarSign className="h-8 w-8 text-teal-600" />
             </div>
           </div>
@@ -196,7 +196,36 @@ const Dashboard = () => {
                 {summary?.by_client?.map(c => (
                   <tr key={c.client_id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900 font-medium">{c.client_name}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">₹{c.amount}</td>
+                    <td className="px-4 py-3 text-sm text-right text-green-600">
+                      <div className="inline-flex items-center justify-end gap-2">
+                        <span className="font-semibold">₹{c.amount}</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button type="button" className="text-gray-400 hover:text-gray-600">
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 p-3">
+                            <p className="text-sm font-semibold text-gray-900">Client revenue split</p>
+                            <p className="text-sm text-gray-700 mt-2">This client amount is split as follows:</p>
+                            <div className="mt-3 space-y-2 text-sm text-gray-700">
+                              <div className="flex justify-between">
+                                <span>Referral Partner (10%)</span>
+                                <span className="font-semibold">{formatCurrency(c.amount * 0.1)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Execution Partner (80%)</span>
+                                <span className="font-semibold">{formatCurrency(c.amount * 0.8)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Admin (10%)</span>
+                                <span className="font-semibold">{formatCurrency(c.amount * 0.1)}</span>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {summary?.total_revenue > 0 ? ((c.amount / summary?.total_revenue) * 100).toFixed(1) : 0}%
                     </td>

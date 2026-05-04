@@ -12,7 +12,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api/admin`;
 
 const PartnersManagement = () => {
-  const [partners, setPartners] = useState({ execution: [], referral: [] });
+  const [partners, setPartners] = useState({ execution: [], referral: [], both: [] });
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [clients, setClients] = useState([]);
   const [partnerRevenues, setPartnerRevenues] = useState({});
@@ -32,17 +32,19 @@ const PartnersManagement = () => {
   const fetchPartners = useCallback(async () => {
     try {
       const token = localStorage.getItem('admin_token');
-      const [executionRes, referralRes] = await Promise.all([
+      const [executionRes, referralRes, bothRes] = await Promise.all([
         axios.get(`${API}/partners?category=execution`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/partners?category=referral`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API}/partners?category=referral`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/partners?category=both`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setPartners({
         execution: executionRes.data.data || [],
-        referral: referralRes.data.data || []
+        referral: referralRes.data.data || [],
+        both: bothRes.data.data || []
       });
       
       // Fetch revenue for all partners
-      const allPartners = [...(executionRes.data.data || []), ...(referralRes.data.data || [])];
+      const allPartners = [...(executionRes.data.data || []), ...(referralRes.data.data || []), ...(bothRes.data.data || [])];
       const revenuePromises = allPartners.map(async (partner) => {
         try {
           const revenueRes = await axios.get(`${API}/partners/${getId(partner)}/revenue`, { headers: { Authorization: `Bearer ${token}` } });
@@ -232,12 +234,13 @@ const PartnersManagement = () => {
       </div>
 
       <Tabs defaultValue="execution" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="execution">Execution Partners</TabsTrigger>
           <TabsTrigger value="referral">Referral Partners</TabsTrigger>
+          <TabsTrigger value="both">Both Partners</TabsTrigger>
         </TabsList>
 
-        {['execution', 'referral'].map(category => (
+        {['execution', 'referral', 'both'].map(category => (
           <TabsContent key={category} value={category} className="space-y-4">
             {!selectedPartner || selectedPartner.category !== category ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -361,6 +364,7 @@ const PartnersManagement = () => {
             >
               <option value="execution">Execution Partner</option>
               <option value="referral">Referral Partner</option>
+              <option value="both">Both Referral and Execution Partner</option>
             </select>
             <input
               type="text"

@@ -604,20 +604,21 @@ async def update_settings_admin(
 
 @admin_router.get("/partners")
 async def get_partners_admin(
-    category: Optional[str] = Query(None, description="Filter by category: execution or referral"),
+    category: Optional[str] = Query(None, description="Filter by category: execution, referral, or both"),
     session: dict = Depends(verify_admin_token)
 ):
     """Get all partners, optionally filtered by category"""
     try:
         if category:
-            if category not in ["execution", "referral"]:
-                raise HTTPException(status_code=400, detail="Category must be 'execution' or 'referral'")
+            if category not in ["execution", "referral", "both"]:
+                raise HTTPException(status_code=400, detail="Category must be 'execution', 'referral', or 'both'")
             partners = await database.get_partners_by_category(category)
         else:
             # Get all partners
             execution_partners = await database.get_partners_by_category("execution")
             referral_partners = await database.get_partners_by_category("referral")
-            partners = execution_partners + referral_partners
+            both_partners = await database.get_partners_by_category("both")
+            partners = execution_partners + referral_partners + both_partners
         
         return {"success": True, "data": partners}
     except HTTPException:
