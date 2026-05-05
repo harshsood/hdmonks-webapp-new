@@ -1,7 +1,7 @@
 """
 Admin panel API routes
 """
-from fastapi import APIRouter, HTTPException, Header, Query, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Header, Query, Depends, UploadFile, File, Body
 from typing import List, Optional
 from datetime import datetime
 import base64
@@ -789,7 +789,7 @@ async def update_service_breakdown_admin(
     partner_id: str,
     client_id: str,
     service_id: str,
-    breakdown_data: dict,
+    breakdown_data: dict = Body(...),
     session: dict = Depends(verify_admin_token)
 ):
     """Update breakdown percentages for a specific service"""
