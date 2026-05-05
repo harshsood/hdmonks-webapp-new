@@ -122,7 +122,7 @@ const Dashboard = () => {
         <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
           <div className="flex items-center justify-between h-full">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Income</p>
+              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
               <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</p>
             </div>
             <div className="p-3 bg-teal-100 rounded-full flex-shrink-0">
