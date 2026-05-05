@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { usePartnerAuth } from '../../contexts/PartnerAuthContext';
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -7,7 +8,7 @@ const BACKEND = process.env.REACT_APP_BACKEND_URL;
 const ClientsManagement = () => {
   const { token } = usePartnerAuth();
   const [clients, setClients] = useState([]);
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', company: '' });
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '' });
 
   const fetchClients = useCallback(async () => {
     try {
@@ -24,9 +25,13 @@ const ClientsManagement = () => {
     e.preventDefault();
     try {
       await axios.post(`${BACKEND}/api/partner/clients`, form, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Client added successfully');
       setForm({ full_name: '', email: '', phone: '', company: '' });
       fetchClients();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to add client');
+    }
   };
 
   return (
@@ -39,7 +44,6 @@ const ClientsManagement = () => {
             <input value={form.full_name} onChange={e=>setForm({...form, full_name: e.target.value})} placeholder="Full name" className="w-full p-2 border rounded" />
             <input value={form.email} onChange={e=>setForm({...form, email: e.target.value})} placeholder="Email" className="w-full p-2 border rounded" />
             <input value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} placeholder="Phone" className="w-full p-2 border rounded" />
-            <input value={form.company} onChange={e=>setForm({...form, company: e.target.value})} placeholder="Company" className="w-full p-2 border rounded" />
             <button className="w-full bg-orange-500 text-white py-2 rounded">Create</button>
           </form>
         </div>

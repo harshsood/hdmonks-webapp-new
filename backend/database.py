@@ -693,6 +693,8 @@ class Database:
             })
         
         return {"total_revenue": total_revenue, "by_client": by_client}
+
+    async def get_closed_cost_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
         if self.db is None:
             await self.connect()
         pipeline = [
