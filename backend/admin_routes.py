@@ -784,24 +784,29 @@ async def delete_client_admin(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@admin_router.put("/partners/{partner_id}/clients/{client_id}/services/{service_id}/breakdown")
+@admin_router.put("/partners/{partner_id}/clients/{client_id}/breakdown-update")
 async def update_service_breakdown_admin(
     partner_id: str,
     client_id: str,
-    service_id: str,
     breakdown_data: dict = Body(...),
     session: dict = Depends(verify_admin_token)
 ):
-    """Update breakdown percentages for a specific service"""
+    """Update breakdown percentages for a specific service using composite identifier"""
     try:
-        logger.info(f"Updating breakdown for service {service_id} in client {client_id} for partner {partner_id}")
+        logger.info(f"Updating breakdown for client {client_id} for partner {partner_id}")
         logger.info(f"Breakdown data received: {breakdown_data}")
+        
+        # Extract service identifier and percentages
+        service_identifier = breakdown_data.get("service_identifier", {})
+        service_name = service_identifier.get("service_name")
+        price = service_identifier.get("price")
         
         # Validate percentages add up to 100
         referral_percent = float(breakdown_data.get("referral_percent", 10))
         execution_percent = float(breakdown_data.get("execution_percent", 80))
         admin_percent = float(breakdown_data.get("admin_percent", 10))
         
+        logger.info(f"Service identifier: {service_identifier}")
         logger.info(f"Percentages: referral={referral_percent}, execution={execution_percent}, admin={admin_percent}")
         
         total = referral_percent + execution_percent + admin_percent
@@ -809,9 +814,9 @@ async def update_service_breakdown_admin(
             logger.error(f"Invalid total percentage: {total}")
             raise HTTPException(status_code=400, detail="Percentages must add up to 100%")
         
-        # Update the breakdown in database
-        success = await database.update_service_breakdown(
-            partner_id, client_id, service_id,
+        # Update the breakdown in database using composite identifier
+        success = await database.update_service_breakdown_by_identifier(
+            partner_id, client_id, service_name, price,
             {
                 "referral_percent": referral_percent,
                 "execution_percent": execution_percent,
@@ -822,10 +827,10 @@ async def update_service_breakdown_admin(
         logger.info(f"Database update result: {success}")
         
         if not success:
-            logger.error(f"Service not found: {service_id}")
+            logger.error(f"Service not found: {service_name} with price {price}")
             raise HTTPException(status_code=404, detail="Service not found")
         
-        logger.info(f"Service breakdown updated: {service_id}")
+        logger.info(f"Service breakdown updated for {service_name}")
         return {"success": True, "message": "Breakdown updated successfully"}
     except HTTPException:
         raise

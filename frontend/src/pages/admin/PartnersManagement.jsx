@@ -154,11 +154,23 @@ const PartnersManagement = () => {
       const token = localStorage.getItem('admin_token');
       const partnerId = getId(selectedPartner);
       const clientId = getId(editingServiceBreakdown.client);
-      const serviceId = getId(editingServiceBreakdown.service);
+      const service = editingServiceBreakdown.service;
+      
+      // Use service_id, service_name and price as composite key for more reliable identification
+      const breakdownPayload = {
+        ...breakdownFormData,
+        service_identifier: {
+          service_id: service.service_id,
+          service_name: service.service_name,
+          price: service.price
+        }
+      };
+
+      console.log('Sending breakdown update:', breakdownPayload);
 
       await axios.put(
-        `${API}/partners/${partnerId}/clients/${clientId}/services/${serviceId}/breakdown`,
-        breakdownFormData,
+        `${API}/partners/${partnerId}/clients/${clientId}/breakdown-update`,
+        breakdownPayload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

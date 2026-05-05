@@ -639,15 +639,26 @@ class Database:
         result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$pull": {"services": {"id": service_id}}})
         return result.modified_count > 0
 
-    async def update_service_breakdown(self, partner_id: str, client_id: str, service_id: str, breakdown_percentages: Dict[str, Any]) -> bool:
-        """Update breakdown percentages for a specific service"""
+    async def update_service_breakdown_by_identifier(self, partner_id: str, client_id: str, service_name: str, price: float, breakdown_percentages: Dict[str, Any]) -> bool:
+        """Update breakdown percentages for a specific service using composite identifier (service_name and price)"""
         if self.db is None:
             await self.connect()
-        logger.info(f"Updating breakdown for service {service_id} in client {client_id}")
+        logger.info(f"Updating breakdown for service {service_name} (price: {price}) in client {client_id}")
+        
+        # Use positional operator to match the service by name and price
         set_query = {f"services.$.breakdown_percentages": breakdown_percentages}
-        logger.info(f"Query: id={client_id}, partner_id={partner_id}, services.id={service_id}")
+        logger.info(f"Query: id={client_id}, partner_id={partner_id}, services.service_name={service_name}, services.price={price}")
         logger.info(f"Update: {set_query}")
-        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
+        
+        result = await self.db.clients.update_one(
+            {
+                "id": client_id, 
+                "partner_id": partner_id, 
+                "services.service_name": service_name,
+                "services.price": price
+            }, 
+            {"$set": set_query}
+        )
         logger.info(f"Update result - matched: {result.matched_count}, modified: {result.modified_count}")
         return result.modified_count > 0
 
