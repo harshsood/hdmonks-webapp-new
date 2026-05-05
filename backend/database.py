@@ -665,19 +665,34 @@ class Database:
     async def get_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
         if self.db is None:
             await self.connect()
-        pipeline = [
-            {"$match": {"partner_id": partner_id}},
-            {"$unwind": {"path": "$services", "preserveNullAndEmptyArrays": True}},
-            {"$group": {"_id": "$id", "client_name": {"$first": "$full_name"}, "client_total": {"$sum": {"$ifNull": ["$services.price", 0]}}}},
-            {"$group": {"_id": None, "total_revenue": {"$sum": "$client_total"}, "by_client": {"$push": {"client_id": "$_id", "client_name": "$client_name", "amount": "$client_total"}}}}
-        ]
-        res = await self.db.clients.aggregate(pipeline).to_list(1)
-        if not res:
-            return {"total_revenue": 0, "by_client": []}
-        item = res[0]
-        return {"total_revenue": item.get("total_revenue", 0), "by_client": item.get("by_client", [])}
-
-    async def get_closed_cost_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
+        
+        # Get full client data with services for proper breakdown calculation
+        clients = await self.db.clients.find({"partner_id": partner_id}).to_list(None)
+        
+        total_revenue = 0
+        by_client = []
+        
+        for client in clients:
+            client_total = 0
+            # Calculate total from services
+            if client.get("services"):
+                for service in client["services"]:
+                    client_total += float(service.get("price", 0))
+            
+            # Use closed_cost if available and higher
+            closed_cost = float(client.get("closed_cost", 0))
+            if closed_cost > 0:
+                client_total = max(client_total, closed_cost)
+            
+            total_revenue += client_total
+            by_client.append({
+                "client_id": client["id"],
+                "client_name": client.get("full_name", ""),
+                "amount": client_total,
+                "services": client.get("services", [])
+            })
+        
+        return {"total_revenue": total_revenue, "by_client": by_client}
         if self.db is None:
             await self.connect()
         pipeline = [

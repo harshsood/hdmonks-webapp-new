@@ -38,6 +38,36 @@ const Dashboard = () => {
     return 'Execution Partner Share';
   };
 
+  const getClientBreakdown = (client) => {
+    // Calculate breakdown based on services and their custom percentages
+    let referralTotal = 0;
+    let executionTotal = 0;
+    let adminTotal = 0;
+    
+    if (client.services && client.services.length > 0) {
+      client.services.forEach(service => {
+        const price = parseFloat(service.price) || 0;
+        const breakdown = service.breakdown_percentages || {
+          referral_percent: 10,
+          execution_percent: 80,
+          admin_percent: 10
+        };
+        
+        referralTotal += (price * breakdown.referral_percent) / 100;
+        executionTotal += (price * breakdown.execution_percent) / 100;
+        adminTotal += (price * breakdown.admin_percent) / 100;
+      });
+    } else {
+      // Fallback to closed cost with default percentages
+      const amount = client.amount || 0;
+      referralTotal = amount * 0.1;
+      executionTotal = amount * 0.8;
+      adminTotal = amount * 0.1;
+    }
+    
+    return { referralTotal, executionTotal, adminTotal };
+  };
+
   const partnerSharePercent = getPartnerSharePercent(partner?.category);
   const partnerShareLabel = getPartnerShareLabel(partner?.category);
 
@@ -180,67 +210,77 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Client Revenue Details</h2>
-        {summary?.by_client?.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Client Name</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Revenue</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">% of Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {summary?.by_client?.map(c => (
-                  <tr key={c.client_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{c.client_name}</td>
-                    <td className="px-4 py-3 text-sm text-right text-green-600">
-                      <div className="inline-flex items-center justify-end gap-2">
-                        <span className="font-semibold">₹{c.amount}</span>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button type="button" className="text-gray-400 hover:text-gray-600">
-                              <Info className="h-4 w-4" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-72 p-3">
-                            <p className="text-sm font-semibold text-gray-900">Client revenue split</p>
-                            <p className="text-sm text-gray-700 mt-2">This client amount is split as follows:</p>
-                            <div className="mt-3 space-y-2 text-sm text-gray-700">
-                              <div className="flex justify-between">
-                                <span>Referral Partner (10%)</span>
-                                <span className="font-semibold">{formatCurrency(c.amount * 0.1)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Execution Partner (80%)</span>
-                                <span className="font-semibold">{formatCurrency(c.amount * 0.8)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Admin (10%)</span>
-                                <span className="font-semibold">{formatCurrency(c.amount * 0.1)}</span>
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {summary?.total_revenue > 0 ? ((c.amount / summary?.total_revenue) * 100).toFixed(1) : 0}%
-                    </td>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Referral Partner Revenue Table */}
+        <Card className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Referral Partner Revenue</h2>
+          {summary?.by_client?.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-blue-50 border-b border-blue-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-blue-700">Client Name</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-blue-700">Referral Share</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center py-12 text-gray-500">
-            <AlertCircle className="w-5 h-5 mr-2" />
-            <span>No clients added yet</span>
-          </div>
-        )}
-      </Card>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {summary?.by_client?.map(c => {
+                    const { referralTotal } = getClientBreakdown(c);
+                    return (
+                      <tr key={`referral-${c.client_id}`} className="hover:bg-blue-50">
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{c.client_name}</td>
+                        <td className="px-4 py-3 text-sm text-right text-blue-600 font-semibold">
+                          {formatCurrency(referralTotal)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12 text-gray-500">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              <span>No clients added yet</span>
+            </div>
+          )}
+        </Card>
+
+        {/* Execution Partner Revenue Table */}
+        <Card className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Execution Partner Revenue</h2>
+          {summary?.by_client?.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-green-50 border-b border-green-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-green-700">Client Name</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-green-700">Execution Share</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {summary?.by_client?.map(c => {
+                    const { executionTotal } = getClientBreakdown(c);
+                    return (
+                      <tr key={`execution-${c.client_id}`} className="hover:bg-green-50">
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{c.client_name}</td>
+                        <td className="px-4 py-3 text-sm text-right text-green-600 font-semibold">
+                          {formatCurrency(executionTotal)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12 text-gray-500">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              <span>No clients added yet</span>
+            </div>
+          )}
+        </Card>
+      </div>
 
     </div>
   );
