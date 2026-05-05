@@ -784,6 +784,47 @@ async def delete_client_admin(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@admin_router.put("/partners/{partner_id}/clients/{client_id}/services/{service_id}/breakdown")
+async def update_service_breakdown_admin(
+    partner_id: str,
+    client_id: str,
+    service_id: str,
+    breakdown_data: dict,
+    session: dict = Depends(verify_admin_token)
+):
+    """Update breakdown percentages for a specific service"""
+    try:
+        # Validate percentages add up to 100
+        referral_percent = float(breakdown_data.get("referral_percent", 10))
+        execution_percent = float(breakdown_data.get("execution_percent", 80))
+        admin_percent = float(breakdown_data.get("admin_percent", 10))
+        
+        total = referral_percent + execution_percent + admin_percent
+        if abs(total - 100) > 0.01:  # Allow for small floating point errors
+            raise HTTPException(status_code=400, detail="Percentages must add up to 100%")
+        
+        # Update the breakdown in database
+        success = await database.update_service_breakdown(
+            partner_id, client_id, service_id,
+            {
+                "referral_percent": referral_percent,
+                "execution_percent": execution_percent,
+                "admin_percent": admin_percent
+            }
+        )
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Service not found")
+        
+        logger.info(f"Service breakdown updated: {service_id}")
+        return {"success": True, "message": "Breakdown updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating service breakdown: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @admin_router.get("/partners/{partner_id}/revenue")
 async def get_partner_revenue_admin(
     partner_id: str,

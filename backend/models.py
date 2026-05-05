@@ -421,6 +421,12 @@ class ClientService(BaseModel):
     price: Optional[float] = 0.0
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
     metadata: Optional[dict] = {}
+    # Custom breakdown percentages (defaults: 10% referral, 80% execution, 10% admin)
+    breakdown_percentages: Optional[dict] = Field(default_factory=lambda: {
+        "referral_percent": 10,
+        "execution_percent": 80,
+        "admin_percent": 10
+    })
 
 
 class Client(BaseModel):
@@ -462,6 +468,7 @@ class ClientServiceCreate(BaseModel):
 class ClientServiceUpdate(BaseModel):
     price: Optional[float] = None
     metadata: Optional[dict] = None
+    breakdown_percentages: Optional[dict] = None
 
 
 # Analytics Model

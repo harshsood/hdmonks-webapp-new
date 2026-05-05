@@ -639,6 +639,14 @@ class Database:
         result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$pull": {"services": {"id": service_id}}})
         return result.modified_count > 0
 
+    async def update_service_breakdown(self, partner_id: str, client_id: str, service_id: str, breakdown_percentages: Dict[str, Any]) -> bool:
+        """Update breakdown percentages for a specific service"""
+        if self.db is None:
+            await self.connect()
+        set_query = {f"services.$.breakdown_percentages": breakdown_percentages}
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
+        return result.modified_count > 0
+
     async def get_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
         if self.db is None:
             await self.connect()

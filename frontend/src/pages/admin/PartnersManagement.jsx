@@ -22,6 +22,13 @@ const PartnersManagement = () => {
   const [editingClient, setEditingClient] = useState(null);
   const [selectedClientForSplits, setSelectedClientForSplits] = useState(null);
   const [isSplitsModalOpen, setIsSplitsModalOpen] = useState(false);
+  const [editingServiceBreakdown, setEditingServiceBreakdown] = useState(null);
+  const [isEditBreakdownModalOpen, setIsEditBreakdownModalOpen] = useState(false);
+  const [breakdownFormData, setBreakdownFormData] = useState({
+    referral_percent: 10,
+    execution_percent: 80,
+    admin_percent: 10
+  });
   const [partnerFormData, setPartnerFormData] = useState({
     username: '', email: '', password: '', name: '', phone: '', category: 'execution'
   });
@@ -104,6 +111,65 @@ const PartnersManagement = () => {
     executionShare: amount * 0.8,
     adminShare: amount * 0.1,
   });
+
+  const getServiceBreakdown = (service) => {
+    const price = parseFloat(service.price) || 0;
+    const breakdown = service.breakdown_percentages || {
+      referral_percent: 10,
+      execution_percent: 80,
+      admin_percent: 10
+    };
+    return {
+      referralShare: (price * breakdown.referral_percent) / 100,
+      executionShare: (price * breakdown.execution_percent) / 100,
+      adminShare: (price * breakdown.admin_percent) / 100,
+      breakdown
+    };
+  };
+
+  const openEditBreakdownModal = (client, service) => {
+    setEditingServiceBreakdown({ client, service });
+    const breakdown = service.breakdown_percentages || {
+      referral_percent: 10,
+      execution_percent: 80,
+      admin_percent: 10
+    };
+    setBreakdownFormData(breakdown);
+    setIsEditBreakdownModalOpen(true);
+  };
+
+  const handleBreakdownSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Validate percentages add up to 100
+      const total = parseFloat(breakdownFormData.referral_percent) + 
+                    parseFloat(breakdownFormData.execution_percent) + 
+                    parseFloat(breakdownFormData.admin_percent);
+      
+      if (Math.abs(total - 100) > 0.01) {
+        toast.error('Percentages must add up to 100%');
+        return;
+      }
+
+      const token = localStorage.getItem('admin_token');
+      const partnerId = getId(selectedPartner);
+      const clientId = getId(editingServiceBreakdown.client);
+      const serviceId = getId(editingServiceBreakdown.service);
+
+      await axios.put(
+        `${API}/partners/${partnerId}/clients/${clientId}/services/${serviceId}/breakdown`,
+        breakdownFormData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('Breakdown updated');
+      setIsEditBreakdownModalOpen(false);
+      fetchClients(partnerId);
+      setEditingServiceBreakdown(null);
+    } catch (error) {
+      toast.error('Failed to update breakdown');
+    }
+  };
 
   const handlePartnerSubmit = async (e) => {
     e.preventDefault();
@@ -303,9 +369,12 @@ const PartnersManagement = () => {
                       {(() => {
                         const clientClosedCost = getClientClosedCost(client);
                         if (clientClosedCost <= 0) return null;
-                        const { referralShare, executionShare, adminShare } = getClosedCostSplits(clientClosedCost);
+                        
+                        // Show breakdown based on services or closed cost
+                        const hasServices = client.services && client.services.length > 0;
+                        
                         return (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
                             <span>Closed Cost:</span>
                             <span className="font-semibold text-green-600">{formatCurrency(clientClosedCost)}</span>
                             <Popover>
@@ -317,23 +386,64 @@ const PartnersManagement = () => {
                                   <Info className="h-4 w-4" />
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-72 p-3">
-                                <div className="space-y-2">
-                                  <p className="text-sm font-semibold text-gray-900">Split breakdown</p>
-                                  <div className="space-y-2 text-sm text-gray-700">
-                                    <div className="flex justify-between">
-                                      <span>Referral Partner (10%)</span>
-                                      <span className="font-semibold text-blue-600">{formatCurrency(referralShare)}</span>
+                              <PopoverContent className="w-96 p-4 max-h-96 overflow-y-auto">
+                                <div className="space-y-3">
+                                  <p className="text-sm font-semibold text-gray-900">Split Breakdown</p>
+                                  
+                                  {hasServices ? (
+                                    <div className="space-y-4">
+                                      {client.services.map((service, idx) => {
+                                        const servicePrice = parseFloat(service.price) || 0;
+                                        if (servicePrice <= 0) return null;
+                                        
+                                        const { referralShare, executionShare, adminShare, breakdown } = getServiceBreakdown(service);
+                                        
+                                        return (
+                                          <div key={service.id || idx} className="border-b pb-3 last:border-b-0">
+                                            <div className="flex justify-between items-center mb-2">
+                                              <p className="text-xs font-semibold text-gray-700">{service.service_name || 'Service'}</p>
+                                              <button
+                                                onClick={() => openEditBreakdownModal(client, service)}
+                                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                              >
+                                                Edit %
+                                              </button>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mb-2">Amount: {formatCurrency(servicePrice)}</p>
+                                            <div className="space-y-1 text-xs text-gray-700">
+                                              <div className="flex justify-between">
+                                                <span>Referral ({breakdown.referral_percent}%)</span>
+                                                <span className="font-semibold text-blue-600">{formatCurrency(referralShare)}</span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                <span>Execution ({breakdown.execution_percent}%)</span>
+                                                <span className="font-semibold text-green-600">{formatCurrency(executionShare)}</span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                <span>Admin ({breakdown.admin_percent}%)</span>
+                                                <span className="font-semibold text-orange-600">{formatCurrency(adminShare)}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                    <div className="flex justify-between">
-                                      <span>Execution Partner (80%)</span>
-                                      <span className="font-semibold text-green-600">{formatCurrency(executionShare)}</span>
+                                  ) : (
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <div className="flex justify-between">
+                                        <span>Referral Partner (10%)</span>
+                                        <span className="font-semibold text-blue-600">{formatCurrency(clientClosedCost * 0.1)}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Execution Partner (80%)</span>
+                                        <span className="font-semibold text-green-600">{formatCurrency(clientClosedCost * 0.8)}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Admin (10%)</span>
+                                        <span className="font-semibold text-orange-600">{formatCurrency(clientClosedCost * 0.1)}</span>
+                                      </div>
                                     </div>
-                                    <div className="flex justify-between">
-                                      <span>Admin (10%)</span>
-                                      <span className="font-semibold text-orange-600">{formatCurrency(adminShare)}</span>
-                                    </div>
-                                  </div>
+                                  )}
                                 </div>
                               </PopoverContent>
                             </Popover>
@@ -508,6 +618,127 @@ const PartnersManagement = () => {
                 <div className="text-center text-sm text-gray-600 mt-4">
                   Distribution based on the closed cost amount
                 </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Breakdown Percentages Modal */}
+      <Dialog open={isEditBreakdownModalOpen} onOpenChange={setIsEditBreakdownModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Edit Breakdown - {editingServiceBreakdown?.service?.service_name || 'Service'}
+            </DialogTitle>
+          </DialogHeader>
+          {editingServiceBreakdown && (() => {
+            const service = editingServiceBreakdown.service;
+            const servicePrice = parseFloat(service.price) || 0;
+            const calculatedBreakdown = {
+              referralShare: (servicePrice * breakdownFormData.referral_percent) / 100,
+              executionShare: (servicePrice * breakdownFormData.execution_percent) / 100,
+              adminShare: (servicePrice * breakdownFormData.admin_percent) / 100
+            };
+            const total = parseFloat(breakdownFormData.referral_percent) + 
+                          parseFloat(breakdownFormData.execution_percent) + 
+                          parseFloat(breakdownFormData.admin_percent);
+            const totalValid = Math.abs(total - 100) < 0.01;
+
+            return (
+              <div className="space-y-4">
+                {/* Service Amount Display */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-500">Service Amount</p>
+                  <p className="text-2xl font-semibold text-gray-900">{formatCurrency(servicePrice)}</p>
+                </div>
+
+                {/* Percentage Inputs */}
+                <form onSubmit={handleBreakdownSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Referral Partner (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={breakdownFormData.referral_percent}
+                      onChange={(e) => setBreakdownFormData({...breakdownFormData, referral_percent: parseFloat(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <p className="text-xs text-blue-600 mt-1">₹{formatCurrency(calculatedBreakdown.referralShare)}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Execution Partner (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={breakdownFormData.execution_percent}
+                      onChange={(e) => setBreakdownFormData({...breakdownFormData, execution_percent: parseFloat(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <p className="text-xs text-green-600 mt-1">₹{formatCurrency(calculatedBreakdown.executionShare)}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Admin - HD Monks (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={breakdownFormData.admin_percent}
+                      onChange={(e) => setBreakdownFormData({...breakdownFormData, admin_percent: parseFloat(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <p className="text-xs text-orange-600 mt-1">₹{formatCurrency(calculatedBreakdown.adminShare)}</p>
+                  </div>
+
+                  {/* Total Validation */}
+                  <div className={`p-3 rounded-lg ${totalValid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <p className={`text-sm font-semibold ${totalValid ? 'text-green-700' : 'text-red-700'}`}>
+                      Total: {total.toFixed(2)}% {totalValid ? '✓' : '(Must equal 100%)'}
+                    </p>
+                  </div>
+
+                  {/* Breakdown Summary */}
+                  <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs font-semibold text-gray-700">Distribution Preview:</p>
+                    <div className="space-y-1 text-xs text-gray-700">
+                      <div className="flex justify-between">
+                        <span>Referral</span>
+                        <span className="font-semibold text-blue-600">{formatCurrency(calculatedBreakdown.referralShare)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Execution</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(calculatedBreakdown.executionShare)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Admin</span>
+                        <span className="font-semibold text-orange-600">{formatCurrency(calculatedBreakdown.adminShare)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsEditBreakdownModalOpen(false)} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-1 bg-orange-500" disabled={!totalValid}>
+                      Save Changes
+                    </Button>
+                  </div>
+                </form>
               </div>
             );
           })()}
