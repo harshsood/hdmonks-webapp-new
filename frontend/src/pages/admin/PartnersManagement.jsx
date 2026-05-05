@@ -592,14 +592,6 @@ const PartnersManagement = () => {
               onChange={e => setClientFormData({...clientFormData, company: e.target.value})}
               className="w-full px-3 py-2 border rounded-lg"
             />
-            <input
-              type="number"
-              placeholder="Closed Cost"
-              value={clientFormData.closed_cost}
-              onChange={e => setClientFormData({...clientFormData, closed_cost: parseFloat(e.target.value) || 0})}
-              className="w-full px-3 py-2 border rounded-lg"
-              step="0.01"
-            />
             <Button type="submit" className="w-full bg-orange-500">
               {editingClient ? 'Update Client' : 'Add Client'}
             </Button>

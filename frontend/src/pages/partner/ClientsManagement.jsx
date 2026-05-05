@@ -8,7 +8,7 @@ const BACKEND = process.env.REACT_APP_BACKEND_URL;
 const ClientsManagement = () => {
   const { token } = usePartnerAuth();
   const [clients, setClients] = useState([]);
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '' });
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', company: '' });
 
   const fetchClients = useCallback(async () => {
     try {
@@ -44,6 +44,7 @@ const ClientsManagement = () => {
             <input value={form.full_name} onChange={e=>setForm({...form, full_name: e.target.value})} placeholder="Full name" className="w-full p-2 border rounded" />
             <input value={form.email} onChange={e=>setForm({...form, email: e.target.value})} placeholder="Email" className="w-full p-2 border rounded" />
             <input value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} placeholder="Phone" className="w-full p-2 border rounded" />
+            <input value={form.company} onChange={e=>setForm({...form, company: e.target.value})} placeholder="Company" className="w-full p-2 border rounded" />
             <button className="w-full bg-orange-500 text-white py-2 rounded">Create</button>
           </form>
         </div>

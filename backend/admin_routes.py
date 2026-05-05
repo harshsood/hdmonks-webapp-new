@@ -846,7 +846,7 @@ async def get_partner_revenue_admin(
 ):
     """Get revenue summary for a specific partner"""
     try:
-        summary = await database.get_closed_cost_revenue_by_partner(partner_id)
+        summary = await database.get_revenue_by_partner(partner_id)
         return {"success": True, "data": summary}
     except Exception as e:
         logger.error(f"Error fetching partner revenue: {str(e)}")
