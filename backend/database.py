@@ -643,8 +643,12 @@ class Database:
         """Update breakdown percentages for a specific service"""
         if self.db is None:
             await self.connect()
+        logger.info(f"Updating breakdown for service {service_id} in client {client_id}")
         set_query = {f"services.$.breakdown_percentages": breakdown_percentages}
+        logger.info(f"Query: id={client_id}, partner_id={partner_id}, services.id={service_id}")
+        logger.info(f"Update: {set_query}")
         result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
+        logger.info(f"Update result - matched: {result.matched_count}, modified: {result.modified_count}")
         return result.modified_count > 0
 
     async def get_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:

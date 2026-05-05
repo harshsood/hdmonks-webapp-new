@@ -794,13 +794,19 @@ async def update_service_breakdown_admin(
 ):
     """Update breakdown percentages for a specific service"""
     try:
+        logger.info(f"Updating breakdown for service {service_id} in client {client_id} for partner {partner_id}")
+        logger.info(f"Breakdown data received: {breakdown_data}")
+        
         # Validate percentages add up to 100
         referral_percent = float(breakdown_data.get("referral_percent", 10))
         execution_percent = float(breakdown_data.get("execution_percent", 80))
         admin_percent = float(breakdown_data.get("admin_percent", 10))
         
+        logger.info(f"Percentages: referral={referral_percent}, execution={execution_percent}, admin={admin_percent}")
+        
         total = referral_percent + execution_percent + admin_percent
         if abs(total - 100) > 0.01:  # Allow for small floating point errors
+            logger.error(f"Invalid total percentage: {total}")
             raise HTTPException(status_code=400, detail="Percentages must add up to 100%")
         
         # Update the breakdown in database
@@ -813,7 +819,10 @@ async def update_service_breakdown_admin(
             }
         )
         
+        logger.info(f"Database update result: {success}")
+        
         if not success:
+            logger.error(f"Service not found: {service_id}")
             raise HTTPException(status_code=404, detail="Service not found")
         
         logger.info(f"Service breakdown updated: {service_id}")
@@ -821,7 +830,7 @@ async def update_service_breakdown_admin(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating service breakdown: {str(e)}")
+        logger.error(f"Error updating service breakdown: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

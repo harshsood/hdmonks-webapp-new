@@ -167,7 +167,8 @@ const PartnersManagement = () => {
       fetchClients(partnerId);
       setEditingServiceBreakdown(null);
     } catch (error) {
-      toast.error('Failed to update breakdown');
+      console.error('Breakdown update error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || 'Failed to update breakdown');
     }
   };
 
