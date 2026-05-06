@@ -28,9 +28,13 @@ const ClientsManagement = () => {
       if (!response?.data?.success) {
         throw new Error(response?.data?.detail || 'Client creation failed');
       }
-      await fetchClients();
+      const createdClient = response.data.data;
+      setClients((prevClients) => [createdClient, ...prevClients]);
       setForm({ full_name: '', email: '', phone: '', company: '' });
       toast.success('Client added successfully');
+      fetchClients().catch((refreshErr) => {
+        console.error('Failed to refresh clients after add:', refreshErr);
+      });
     } catch (err) {
       console.error('Create client error:', err);
       const message = err.response?.data?.detail || err.message || 'Failed to add client';
