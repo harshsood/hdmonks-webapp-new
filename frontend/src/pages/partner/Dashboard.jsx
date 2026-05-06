@@ -210,31 +210,54 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Referral Partner Revenue Table */}
         <Card className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Referral Partner Revenue</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Revenue Earned as a Referral Partner</h2>
           {summary?.by_client?.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-blue-50 border-b border-blue-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-blue-700">Client Name</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-blue-700">Referral Share</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-blue-700">Service Name</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-blue-700">Tentative Cost</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-blue-700">% Share (Referral)</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-blue-700">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {summary?.by_client?.map(c => {
-                    const { referralTotal } = getClientBreakdown(c);
-                    return (
-                      <tr key={`referral-${c.client_id}`} className="hover:bg-blue-50">
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{c.client_name}</td>
-                        <td className="px-4 py-3 text-sm text-right text-blue-600 font-semibold">
-                          {formatCurrency(referralTotal)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {summary?.by_client?.map(client =>
+                    client.services && client.services.length > 0
+                      ? client.services.map((service, idx) => {
+                          const price = parseFloat(service.price) || 0;
+                          const breakdown = service.breakdown_percentages || {
+                            referral_percent: 10,
+                            execution_percent: 80,
+                            admin_percent: 10
+                          };
+                          const referralPercent = breakdown.referral_percent || 10;
+                          const referralAmount = (price * referralPercent) / 100;
+                          
+                          return (
+                            <tr key={`referral-${client.client_id}-${idx}`} className="hover:bg-blue-50">
+                              <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700">{service.service_name || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(price)}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-900">{referralPercent}%</td>
+                              <td className="px-4 py-3 text-sm text-right text-blue-600 font-semibold">
+                                {formatCurrency(referralAmount)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      : (
+                        <tr key={`referral-${client.client_id}`} className="hover:bg-blue-50">
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
+                          <td colSpan="4" className="px-4 py-3 text-sm text-gray-500 italic">No services added</td>
+                        </tr>
+                      )
+                  )}
                 </tbody>
               </table>
             </div>
@@ -248,28 +271,51 @@ const Dashboard = () => {
 
         {/* Execution Partner Revenue Table */}
         <Card className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Execution Partner Revenue</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Revenue Earned as an Execution Partner</h2>
           {summary?.by_client?.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-green-50 border-b border-green-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-green-700">Client Name</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-green-700">Execution Share</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-green-700">Service Name</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-green-700">Tentative Cost</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-green-700">% Share (Execution)</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-green-700">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {summary?.by_client?.map(c => {
-                    const { executionTotal } = getClientBreakdown(c);
-                    return (
-                      <tr key={`execution-${c.client_id}`} className="hover:bg-green-50">
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{c.client_name}</td>
-                        <td className="px-4 py-3 text-sm text-right text-green-600 font-semibold">
-                          {formatCurrency(executionTotal)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {summary?.by_client?.map(client =>
+                    client.services && client.services.length > 0
+                      ? client.services.map((service, idx) => {
+                          const price = parseFloat(service.price) || 0;
+                          const breakdown = service.breakdown_percentages || {
+                            referral_percent: 10,
+                            execution_percent: 80,
+                            admin_percent: 10
+                          };
+                          const executionPercent = breakdown.execution_percent || 80;
+                          const executionAmount = (price * executionPercent) / 100;
+                          
+                          return (
+                            <tr key={`execution-${client.client_id}-${idx}`} className="hover:bg-green-50">
+                              <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700">{service.service_name || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(price)}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-900">{executionPercent}%</td>
+                              <td className="px-4 py-3 text-sm text-right text-green-600 font-semibold">
+                                {formatCurrency(executionAmount)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      : (
+                        <tr key={`execution-${client.client_id}`} className="hover:bg-green-50">
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
+                          <td colSpan="4" className="px-4 py-3 text-sm text-gray-500 italic">No services added</td>
+                        </tr>
+                      )
+                  )}
                 </tbody>
               </table>
             </div>
