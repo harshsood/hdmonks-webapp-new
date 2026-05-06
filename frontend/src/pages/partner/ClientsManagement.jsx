@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import { usePartnerAuth } from '../../contexts/PartnerAuthContext';
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -37,6 +37,7 @@ const ClientsManagement = () => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Clients</h2>
+      <Toaster position="top-right" richColors />
       <div className="grid md:grid-cols-3 gap-4">
         <div className="md:col-span-1 p-4 bg-white rounded shadow">
           <h3 className="font-semibold mb-2">Add Client</h3>
