@@ -35,6 +35,7 @@ const PartnersManagement = () => {
   const [clientFormData, setClientFormData] = useState({
     full_name: '', email: '', phone: '', company: '', closed_cost: 0
   });
+  const [openPopoverClientId, setOpenPopoverClientId] = useState(null);
 
   const fetchPartners = useCallback(async () => {
     try {
@@ -176,6 +177,7 @@ const PartnersManagement = () => {
 
       toast.success('Breakdown updated');
       setIsEditBreakdownModalOpen(false);
+      setOpenPopoverClientId(null);
       fetchClients(partnerId);
       setEditingServiceBreakdown(null);
     } catch (error) {
@@ -390,7 +392,7 @@ const PartnersManagement = () => {
                           <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
                             <span>Closed Cost:</span>
                             <span className="font-semibold text-green-600">{formatCurrency(clientClosedCost)}</span>
-                            <Popover>
+                            <Popover open={openPopoverClientId === getId(client)} onOpenChange={(isOpen) => isOpen ? setOpenPopoverClientId(getId(client)) : setOpenPopoverClientId(null)}>
                               <PopoverTrigger asChild>
                                 <button
                                   type="button"
