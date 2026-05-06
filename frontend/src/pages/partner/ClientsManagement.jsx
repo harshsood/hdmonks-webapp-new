@@ -9,6 +9,7 @@ const ClientsManagement = () => {
   const { token } = usePartnerAuth();
   const [clients, setClients] = useState([]);
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', company: '' });
+  const [creating, setCreating] = useState(false);
 
   const fetchClients = useCallback(async () => {
     try {
@@ -23,6 +24,8 @@ const ClientsManagement = () => {
 
   const createClient = async (e) => {
     e.preventDefault();
+    if (creating) return;
+    setCreating(true);
     try {
       const response = await axios.post(`${BACKEND}/api/partner/clients`, form, { headers: { Authorization: `Bearer ${token}` } });
       if (!response?.data?.success) {
@@ -39,6 +42,8 @@ const ClientsManagement = () => {
       console.error('Create client error:', err);
       const message = err.response?.data?.detail || err.message || 'Failed to add client';
       toast.error(message);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -54,7 +59,9 @@ const ClientsManagement = () => {
             <input value={form.email} onChange={e=>setForm({...form, email: e.target.value})} placeholder="Email" className="w-full p-2 border rounded" />
             <input value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} placeholder="Phone" className="w-full p-2 border rounded" />
             <input value={form.company} onChange={e=>setForm({...form, company: e.target.value})} placeholder="Company" className="w-full p-2 border rounded" />
-            <button className="w-full bg-orange-500 text-white py-2 rounded">Create</button>
+            <button className="w-full bg-orange-500 text-white py-2 rounded" disabled={creating}>
+              {creating ? 'Creating...' : 'Create'}
+            </button>
           </form>
         </div>
 
