@@ -24,13 +24,17 @@ const ClientsManagement = () => {
   const createClient = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${BACKEND}/api/partner/clients`, form, { headers: { Authorization: `Bearer ${token}` } });
-      toast.success('Client added successfully');
+      const response = await axios.post(`${BACKEND}/api/partner/clients`, form, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response?.data?.success) {
+        throw new Error(response?.data?.detail || 'Client creation failed');
+      }
+      await fetchClients();
       setForm({ full_name: '', email: '', phone: '', company: '' });
-      fetchClients();
+      toast.success('Client added successfully');
     } catch (err) {
-      console.error(err);
-      toast.error('Failed to add client');
+      console.error('Create client error:', err);
+      const message = err.response?.data?.detail || err.message || 'Failed to add client';
+      toast.error(message);
     }
   };
 
