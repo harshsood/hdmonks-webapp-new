@@ -28,20 +28,34 @@ const ClientsManagement = () => {
     setCreating(true);
     try {
       const response = await axios.post(`${BACKEND}/api/partner/clients`, form, { headers: { Authorization: `Bearer ${token}` } });
-      if (!response?.data?.success) {
-        throw new Error(response?.data?.detail || 'Client creation failed');
+      console.log('Client creation response:', response);
+      const createdClient = response?.data?.data;
+      if (!createdClient) {
+        console.error('Invalid response structure:', response?.data);
+        throw new Error('Server returned invalid response');
       }
-      const createdClient = response.data.data;
       setClients((prevClients) => [createdClient, ...prevClients]);
       setForm({ full_name: '', email: '', phone: '', company: '' });
       toast.success('Client added successfully');
+      // Refresh the list in background without affecting success
       fetchClients().catch((refreshErr) => {
         console.error('Failed to refresh clients after add:', refreshErr);
       });
     } catch (err) {
       console.error('Create client error:', err);
-      const message = err.response?.data?.detail || err.message || 'Failed to add client';
-      toast.error(message);
+      // Only show error if it's not a network error that still created the client
+      if (err.response) {
+        // Server responded with error status
+        const message = err.response?.data?.detail || 'Failed to add client';
+        toast.error(message);
+      } else if (err.request) {
+        // Network error
+        console.warn('Network error during client creation, but client may have been created');
+        toast.success('Client may have been added - please refresh the page to confirm');
+      } else {
+        // Other error
+        toast.error('Failed to add client');
+      }
     } finally {
       setCreating(false);
     }
