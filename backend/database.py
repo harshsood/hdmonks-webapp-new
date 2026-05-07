@@ -630,7 +630,14 @@ class Database:
             await self.connect()
         update_data = self._serialize_datetime(update_data)
         set_query = {f"services.$.{k}": v for k, v in update_data.items()}
+
+        # First try matching by internal service document ID
         result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
+        if result.modified_count > 0:
+            return True
+
+        # Fallback to matching by assigned service_id if the service document lacks id
+        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.service_id": service_id}, {"$set": set_query})
         return result.modified_count > 0
 
     async def delete_client_service(self, partner_id: str, client_id: str, service_id: str) -> bool:

@@ -116,7 +116,7 @@ const PartnerRevenueBreakdown = () => {
 
       const token = localStorage.getItem('admin_token');
       const clientId = editingService.client.id;
-      const serviceId = editingService.service.id;
+      const serviceId = editingService.service.id || editingService.service.service_id;
 
       await axios.put(
         `${API}/partners/${partnerId}/clients/${clientId}/services/${serviceId}`,
@@ -233,10 +233,10 @@ const PartnerRevenueBreakdown = () => {
                         const { referral, execution, admin } = calculateBreakdown(price, breakdown);
 
                         return (
-                          <tr key={service.id} className="hover:bg-gray-50">
+                          <tr key={service.id || service.service_id} className="hover:bg-gray-50">
                             <td className="px-3 py-3 align-top">
                               <div className="font-medium text-gray-900">{service.service_name || 'Service'}</div>
-                              <div className="text-xs text-gray-500">{service.service_id || 'ID not available'}</div>
+                              <div className="text-xs text-gray-500">{service.service_id || service.id || 'ID not available'}</div>
                             </td>
                             <td className="px-3 py-3 text-right text-gray-900">{formatCurrency(price)}</td>
                             <td className="px-3 py-3 text-center text-blue-700">
