@@ -697,6 +697,50 @@ async def delete_partner_admin(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@admin_router.get("/partners/{partner_id}")
+async def get_partner_admin(
+    partner_id: str,
+    session: dict = Depends(verify_admin_token)
+):
+    """Get a partner by ID"""
+    try:
+        partner = await database.get_partner_by_id(partner_id)
+        if not partner:
+            raise HTTPException(status_code=404, detail="Partner not found")
+        return {"success": True, "data": partner}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching partner: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_router.put("/partners/{partner_id}/clients/{client_id}/services/{service_id}")
+async def update_client_service_admin(
+    partner_id: str,
+    client_id: str,
+    service_id: str,
+    service_update: ClientServiceUpdate,
+    session: dict = Depends(verify_admin_token)
+):
+    """Update a client service price and/or breakdown percentages"""
+    try:
+        update_data = {k: v for k, v in service_update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+
+        success = await database.update_client_service(partner_id, client_id, service_id, update_data)
+        if not success:
+            raise HTTPException(status_code=404, detail="Service not found")
+
+        return {"success": True, "message": "Service updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating client service: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @admin_router.get("/partners/{partner_id}/clients")
 async def get_partner_clients_admin(
     partner_id: str,

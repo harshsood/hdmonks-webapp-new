@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover';
 import { Plus, Trash2, Edit, Users, User, Info } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
@@ -35,7 +35,7 @@ const PartnersManagement = () => {
   const [clientFormData, setClientFormData] = useState({
     full_name: '', email: '', phone: '', company: '', closed_cost: 0
   });
-  const [openPopoverClientId, setOpenPopoverClientId] = useState(null);
+  const navigate = useNavigate();
 
   const fetchPartners = useCallback(async () => {
     try {
@@ -90,6 +90,14 @@ const PartnersManagement = () => {
   };
 
   const getId = (item) => item?.id || item?._id;
+
+  const getPartnerSharePercent = (category) => {
+    const normalized = (category || '').toLowerCase();
+    if (normalized.includes('both')) return 0.9;
+    if (normalized.includes('execution')) return 0.8;
+    if (normalized.includes('referral')) return 0.1;
+    return 0.8;
+  };
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', {
@@ -177,7 +185,6 @@ const PartnersManagement = () => {
 
       toast.success('Breakdown updated');
       setIsEditBreakdownModalOpen(false);
-      setOpenPopoverClientId(null);
       fetchClients(partnerId);
       setEditingServiceBreakdown(null);
     } catch (error) {
@@ -344,21 +351,28 @@ const PartnersManagement = () => {
                     <p className="text-sm text-gray-600">{partner.email}</p>
                     {partner.phone && <p className="text-sm text-gray-600">{partner.phone}</p>}
                     <p className="text-sm font-semibold text-green-600 mt-1">
-                      Total Revenue: ₹{partnerRevenues[getId(partner)] || 0}
+                      Total Revenue: {formatCurrency((partnerRevenues[getId(partner)] || 0) * getPartnerSharePercent(partner.category))}
                     </p>
                   </Card>
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Button variant="outline" onClick={() => setSelectedPartner(null)}>
-                    ← Back to Partners
-                  </Button>
-                  <h2 className="text-xl font-semibold">Clients of {selectedPartner.name || selectedPartner.username}</h2>
-                  <Button onClick={() => openClientModal()} className="bg-orange-500 ml-auto">
-                    <Plus className="h-4 w-4 mr-2" />Add Client
-                  </Button>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button variant="outline" onClick={() => setSelectedPartner(null)}>
+                      ← Back to Partners
+                    </Button>
+                    <h2 className="text-xl font-semibold">Clients of {selectedPartner.name || selectedPartner.username}</h2>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Button variant="outline" onClick={() => navigate(`/admin/partners/${getId(selectedPartner)}/breakdown`)}>
+                      <Info className="h-4 w-4 mr-2" />Revenue Breakdown
+                    </Button>
+                    <Button onClick={() => openClientModal()} className="bg-orange-500">
+                      <Plus className="h-4 w-4 mr-2" />Add Client
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -392,96 +406,9 @@ const PartnersManagement = () => {
                           <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
                             <span>Closed Cost:</span>
                             <span className="font-semibold text-green-600">{formatCurrency(clientClosedCost)}</span>
-                            <Popover open={openPopoverClientId === getId(client)} onOpenChange={(isOpen) => isOpen ? setOpenPopoverClientId(getId(client)) : setOpenPopoverClientId(null)}>
-                              <PopoverTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                  <Info className="h-4 w-4" />
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[600px] p-6 max-h-[600px] overflow-y-auto">
-                                <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <h3 className="text-lg font-semibold text-gray-900">Revenue Breakdown</h3>
-                                      <p className="text-sm text-gray-500">Each row is one service.</p>
-                                    </div>
-                                    <span className="text-sm text-gray-500">Total: {formatCurrency(clientClosedCost)}</span>
-                                  </div>
-
-                                  {hasServices ? (
-                                    <div className="overflow-x-auto">
-                                      <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                        <thead className="bg-gray-50">
-                                          <tr>
-                                            <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wide">Service</th>
-                                            <th className="px-3 py-2 text-right font-semibold text-gray-600 uppercase tracking-wide">Amount</th>
-                                            <th className="px-3 py-2 text-center font-semibold text-gray-600 uppercase tracking-wide">Referral</th>
-                                            <th className="px-3 py-2 text-center font-semibold text-gray-600 uppercase tracking-wide">Execution</th>
-                                            <th className="px-3 py-2 text-center font-semibold text-gray-600 uppercase tracking-wide">Admin</th>
-                                            <th className="px-3 py-2 text-right font-semibold text-gray-600 uppercase tracking-wide">Action</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200 bg-white">
-                                          {client.services.map((service, idx) => {
-                                            const servicePrice = parseFloat(service.price) || 0;
-                                            if (servicePrice <= 0) return null;
-
-                                            const { referralShare, executionShare, adminShare, breakdown } = getServiceBreakdown(service);
-                                            return (
-                                              <tr key={service.id || idx}>
-                                                <td className="px-3 py-3 align-top">
-                                                  <div className="font-medium text-gray-900">{service.service_name || 'Service'}</div>
-                                                  <div className="text-xs text-gray-500">{service.service_id || 'N/A'}</div>
-                                                </td>
-                                                <td className="px-3 py-3 text-right text-gray-900">{formatCurrency(servicePrice)}</td>
-                                                <td className="px-3 py-3 text-center text-blue-700">
-                                                  <div className="font-semibold">{breakdown.referral_percent}%</div>
-                                                  <div className="text-xs text-blue-600">{formatCurrency(referralShare)}</div>
-                                                </td>
-                                                <td className="px-3 py-3 text-center text-green-700">
-                                                  <div className="font-semibold">{breakdown.execution_percent}%</div>
-                                                  <div className="text-xs text-green-600">{formatCurrency(executionShare)}</div>
-                                                </td>
-                                                <td className="px-3 py-3 text-center text-orange-700">
-                                                  <div className="font-semibold">{breakdown.admin_percent}%</div>
-                                                  <div className="text-xs text-orange-600">{formatCurrency(adminShare)}</div>
-                                                </td>
-                                                <td className="px-3 py-3 text-right">
-                                                  <button
-                                                    onClick={() => openEditBreakdownModal(client, service)}
-                                                    className="text-xs font-semibold text-blue-600 hover:text-blue-800"
-                                                  >
-                                                    Edit %
-                                                  </button>
-                                                </td>
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  ) : (
-                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-                                      <div className="flex items-center justify-between mb-3">
-                                        <span>Referral</span>
-                                        <span className="font-semibold text-blue-700">10%</span>
-                                      </div>
-                                      <div className="flex items-center justify-between mb-3">
-                                        <span>Execution</span>
-                                        <span className="font-semibold text-green-700">80%</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span>Admin</span>
-                                        <span className="font-semibold text-orange-700">10%</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/admin/partners/${getId(selectedPartner)}/breakdown`)}>
+                              <Info className="h-4 w-4 mr-1" /> View Breakdown
+                            </Button>
                           </div>
                         );
                       })()}

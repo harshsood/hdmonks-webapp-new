@@ -22,6 +22,7 @@ import PackagesManagement from "./pages/admin/PackagesManagement";
 import EmailTemplatesManagement from "./pages/admin/EmailTemplatesManagement";
 import SettingsManagement from "./pages/admin/SettingsManagement";
 import AnalyticsManagement from "./pages/admin/AnalyticsManagement";
+import PartnerRevenueBreakdown from "./pages/admin/PartnerRevenueBreakdown";
 import PartnerLogin from "./pages/partner/PartnerLogin";
 import PartnerLayout from "./pages/partner/PartnerLayout";
 import PartnerDashboard from "./pages/partner/Dashboard";
@@ -56,6 +57,7 @@ function App() {
               <Route path="services" element={<ServicesManagement />} />
               <Route path="stages" element={<StagesManagement />} />
               <Route path="partners" element={<PartnersManagement />} />
+              <Route path="partners/:partnerId/breakdown" element={<PartnerRevenueBreakdown />} />
               <Route path="inquiries" element={<InquiriesManagement />} />
               <Route path="bookings" element={<BookingsManagement />} />
               <Route path="timeslots" element={<TimeSlotsManagement />} />
