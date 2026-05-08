@@ -794,17 +794,16 @@ class Database:
                 }
                 referral_share = (closed_cost * breakdown["referral_percent"]) / 100
                 execution_share = (closed_cost * breakdown["execution_percent"]) / 100
-                    role_referral = (
-                        partner_id == client.get("referral_partner_id") or
-                        (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
-                        (partner_id == client.get("partner_id") and partner_category in ["referral", "both"] and not client.get("referral_partner_id"))
-                    )
-                    role_execution = (
-                        partner_id == client.get("execution_partner_id") or
-                        (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
-                        (partner_id == client.get("partner_id") and partner_category in ["execution", "both"] and not client.get("execution_partner_id"))
-                    )
-                })
+                role_referral = (
+                    partner_id == client.get("referral_partner_id") or
+                    (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
+                    (partner_id == client.get("partner_id") and partner_category in ["referral", "both"] and not client.get("referral_partner_id"))
+                )
+                role_execution = (
+                    partner_id == client.get("execution_partner_id") or
+                    (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
+                    (partner_id == client.get("partner_id") and partner_category in ["execution", "both"] and not client.get("execution_partner_id"))
+                )
 
             total_revenue += client_total
             total_referral_revenue += client_referral
