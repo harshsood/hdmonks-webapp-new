@@ -156,8 +156,7 @@ const PartnerRevenueBreakdown = () => {
     );
   }
 
-  const partnerSharePercent = getPartnerSharePercent(partner?.category);
-  const partnerRevenue = (summary?.total_revenue || 0) * partnerSharePercent;
+  const partnerRevenue = summary?.partner_total_revenue ?? 0;
 
   return (
     <div className="space-y-6">

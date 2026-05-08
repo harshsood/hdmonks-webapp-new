@@ -33,7 +33,8 @@ const PartnersManagement = () => {
     username: '', email: '', password: '', name: '', phone: '', category: 'execution'
   });
   const [clientFormData, setClientFormData] = useState({
-    full_name: '', email: '', phone: '', company: '', closed_cost: 0
+    full_name: '', email: '', phone: '', company: '', closed_cost: 0,
+    referral_partner_id: '', execution_partner_id: ''
   });
   const navigate = useNavigate();
 
@@ -56,7 +57,7 @@ const PartnersManagement = () => {
       const revenuePromises = allPartners.map(async (partner) => {
         try {
           const revenueRes = await axios.get(`${API}/partners/${getId(partner)}/revenue`, { headers: { Authorization: `Bearer ${token}` } });
-          return { partnerId: getId(partner), revenue: revenueRes.data.data?.total_revenue || 0 };
+          return { partnerId: getId(partner), revenue: revenueRes.data.data?.partner_total_revenue ?? 0 };
         } catch (error) {
           return { partnerId: getId(partner), revenue: 0 };
         }
@@ -298,10 +299,12 @@ const PartnersManagement = () => {
         email: client.email || '',
         phone: client.phone || '',
         company: client.company || '',
-        closed_cost: client.closed_cost || 0
+        closed_cost: client.closed_cost || 0,
+        referral_partner_id: client.referral_partner_id || '',
+        execution_partner_id: client.execution_partner_id || ''
       });
     } else {
-      setClientFormData({ full_name: '', email: '', phone: '', company: '', closed_cost: 0 });
+      setClientFormData({ full_name: '', email: '', phone: '', company: '', closed_cost: 0, referral_partner_id: '', execution_partner_id: '' });
       setEditingClient(null);
     }
     setIsClientModalOpen(true);
@@ -351,7 +354,7 @@ const PartnersManagement = () => {
                     <p className="text-sm text-gray-600">{partner.email}</p>
                     {partner.phone && <p className="text-sm text-gray-600">{partner.phone}</p>}
                     <p className="text-sm font-semibold text-green-600 mt-1">
-                      Total Revenue: {formatCurrency((partnerRevenues[getId(partner)] || 0) * getPartnerSharePercent(partner.category))}
+                      Partner Revenue: {formatCurrency(partnerRevenues[getId(partner)] || 0)}
                     </p>
                   </Card>
                 ))}
@@ -521,6 +524,41 @@ const PartnersManagement = () => {
               onChange={e => setClientFormData({...clientFormData, company: e.target.value})}
               className="w-full px-3 py-2 border rounded-lg"
             />
+            <input
+              type="number"
+              placeholder="Closed Cost"
+              value={clientFormData.closed_cost}
+              onChange={e => setClientFormData({...clientFormData, closed_cost: parseFloat(e.target.value || 0)})}
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+            {(selectedPartner?.category === 'execution' || selectedPartner?.category === 'both') && (
+              <select
+                value={clientFormData.referral_partner_id}
+                onChange={e => setClientFormData({...clientFormData, referral_partner_id: e.target.value})}
+                className="w-full px-3 py-2 border rounded-lg"
+              >
+                <option value="">Select Referral Partner (optional)</option>
+                {[...partners.referral, ...partners.both]
+                  .filter(p => getId(p) !== getId(selectedPartner))
+                  .map(p => (
+                    <option key={getId(p)} value={getId(p)}>{p.name || p.username} ({p.category})</option>
+                  ))}
+              </select>
+            )}
+            {(selectedPartner?.category === 'referral' || selectedPartner?.category === 'both') && (
+              <select
+                value={clientFormData.execution_partner_id}
+                onChange={e => setClientFormData({...clientFormData, execution_partner_id: e.target.value})}
+                className="w-full px-3 py-2 border rounded-lg"
+              >
+                <option value="">Select Execution Partner (optional)</option>
+                {[...partners.execution, ...partners.both]
+                  .filter(p => getId(p) !== getId(selectedPartner))
+                  .map(p => (
+                    <option key={getId(p)} value={getId(p)}>{p.name || p.username} ({p.category})</option>
+                  ))}
+              </select>
+            )}
             <Button type="submit" className="w-full bg-orange-500">
               {editingClient ? 'Update Client' : 'Add Client'}
             </Button>
