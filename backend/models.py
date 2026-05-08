@@ -432,6 +432,8 @@ class ClientService(BaseModel):
 class Client(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     partner_id: str
+    execution_partner_id: Optional[str] = None
+    referral_partner_id: Optional[str] = None
     full_name: str
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
@@ -448,6 +450,8 @@ class ClientCreate(BaseModel):
     phone: Optional[str] = None
     company: Optional[str] = None
     closed_cost: Optional[float] = 0.0
+    execution_partner_id: Optional[str] = None
+    referral_partner_id: Optional[str] = None
 
 
 class ClientUpdate(BaseModel):
@@ -456,6 +460,8 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     company: Optional[str] = None
     closed_cost: Optional[float] = None
+    execution_partner_id: Optional[str] = None
+    referral_partner_id: Optional[str] = None
 
 
 class ClientServiceCreate(BaseModel):

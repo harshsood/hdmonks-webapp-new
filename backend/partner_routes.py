@@ -152,13 +152,32 @@ async def list_clients(session: dict = Depends(verify_partner_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@partner_router.get("/partners")
+async def list_available_partners(session: dict = Depends(verify_partner_token)):
+    try:
+        partner_id = session["partner_id"]
+        current_partner = await database.get_partner_by_id(partner_id)
+        if not current_partner:
+            raise HTTPException(status_code=404, detail="Partner not found")
+
+        execution_partners = await database.get_partners_by_category("execution")
+        referral_partners = await database.get_partners_by_category("referral")
+        both_partners = await database.get_partners_by_category("both")
+        available_partners = [p for p in execution_partners + referral_partners + both_partners if p.get("id") != partner_id]
+        return {"success": True, "data": available_partners}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing available partners: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @partner_router.get("/clients/{client_id}")
 async def get_client(client_id: str, session: dict = Depends(verify_partner_token)):
     try:
         partner_id = session["partner_id"]
         client = await database.get_client_by_id(client_id)
-        if not client or client.get("partner_id") != partner_id:
+        if not client or partner_id not in [client.get("partner_id"), client.get("execution_partner_id"), client.get("referral_partner_id")]:
             raise HTTPException(status_code=404, detail="Client not found")
         return {"success": True, "data": client}
     except HTTPException:
@@ -172,14 +191,40 @@ async def get_client(client_id: str, session: dict = Depends(verify_partner_toke
 async def create_client(client: ClientCreate, session: dict = Depends(verify_partner_token)):
     try:
         partner_id = session["partner_id"]
+        current_partner = await database.get_partner_by_id(partner_id)
+        if not current_partner:
+            raise HTTPException(status_code=404, detail="Partner not found")
+
         client_data = client.dict()
         client_data["id"] = str(uuid.uuid4())
         client_data["partner_id"] = partner_id
         client_data["created_at"] = datetime.utcnow().isoformat()
         client_data["updated_at"] = datetime.utcnow().isoformat()
         client_data["services"] = []
+
+        if current_partner.get("category") == "execution":
+            client_data["execution_partner_id"] = partner_id
+            client_data["referral_partner_id"] = client_data.get("referral_partner_id")
+        elif current_partner.get("category") == "referral":
+            client_data["referral_partner_id"] = partner_id
+            client_data["execution_partner_id"] = client_data.get("execution_partner_id")
+        else:
+            client_data["execution_partner_id"] = client_data.get("execution_partner_id", partner_id)
+            client_data["referral_partner_id"] = client_data.get("referral_partner_id", partner_id)
+
+        if client_data.get("execution_partner_id"):
+            execution_partner = await database.get_partner_by_id(client_data["execution_partner_id"])
+            if not execution_partner:
+                raise HTTPException(status_code=400, detail="Selected execution partner not found")
+        if client_data.get("referral_partner_id"):
+            referral_partner = await database.get_partner_by_id(client_data["referral_partner_id"])
+            if not referral_partner:
+                raise HTTPException(status_code=400, detail="Selected referral partner not found")
+
         created = await database.create_client(client_data)
         return {"success": True, "data": created}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating client: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -191,6 +236,16 @@ async def update_client(client_id: str, update: ClientUpdate, session: dict = De
         partner_id = session["partner_id"]
         update_data = {k: v for k, v in update.dict().items() if v is not None}
         update_data["updated_at"] = datetime.utcnow().isoformat()
+
+        if update_data.get("execution_partner_id"):
+            execution_partner = await database.get_partner_by_id(update_data["execution_partner_id"])
+            if not execution_partner:
+                raise HTTPException(status_code=400, detail="Selected execution partner not found")
+        if update_data.get("referral_partner_id"):
+            referral_partner = await database.get_partner_by_id(update_data["referral_partner_id"])
+            if not referral_partner:
+                raise HTTPException(status_code=400, detail="Selected referral partner not found")
+
         success = await database.update_client(partner_id, client_id, update_data)
         if not success:
             raise HTTPException(status_code=404, detail="Client not found")

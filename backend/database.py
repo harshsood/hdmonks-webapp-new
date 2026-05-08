@@ -596,7 +596,14 @@ class Database:
     async def get_clients_by_partner(self, partner_id: str) -> List[Dict[str, Any]]:
         if self.db is None:
             await self.connect()
-        return await self.db.clients.find({"partner_id": partner_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+        query = {
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }
+        return await self.db.clients.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
     async def get_client_by_id(self, client_id: str) -> Optional[Dict[str, Any]]:
         if self.db is None:
@@ -607,20 +614,44 @@ class Database:
         if self.db is None:
             await self.connect()
         update_data = self._serialize_datetime(update_data)
-        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$set": update_data})
+        query = {
+            "id": client_id,
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }
+        result = await self.db.clients.update_one(query, {"$set": update_data})
         return result.matched_count > 0
 
     async def delete_client(self, partner_id: str, client_id: str) -> bool:
         if self.db is None:
             await self.connect()
-        result = await self.db.clients.delete_one({"id": client_id, "partner_id": partner_id})
+        query = {
+            "id": client_id,
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }
+        result = await self.db.clients.delete_one(query)
         return result.deleted_count > 0
 
     async def add_service_to_client(self, partner_id: str, client_id: str, service_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if self.db is None:
             await self.connect()
         service_data = self._serialize_datetime(service_data)
-        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$push": {"services": service_data}})
+        query = {
+            "id": client_id,
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }
+        result = await self.db.clients.update_one(query, {"$push": {"services": service_data}})
         if result.modified_count > 0:
             return await self.get_client_by_id(client_id)
         return None
@@ -630,20 +661,36 @@ class Database:
             await self.connect()
         update_data = self._serialize_datetime(update_data)
         set_query = {f"services.$.{k}": v for k, v in update_data.items()}
+        query_base = {
+            "id": client_id,
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }
 
         # First try matching by internal service document ID
-        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.id": service_id}, {"$set": set_query})
+        result = await self.db.clients.update_one({**query_base, "services.id": service_id}, {"$set": set_query})
         if result.modified_count > 0:
             return True
 
         # Fallback to matching by assigned service_id if the service document lacks id
-        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id, "services.service_id": service_id}, {"$set": set_query})
+        result = await self.db.clients.update_one({**query_base, "services.service_id": service_id}, {"$set": set_query})
         return result.modified_count > 0
 
     async def delete_client_service(self, partner_id: str, client_id: str, service_id: str) -> bool:
         if self.db is None:
             await self.connect()
-        result = await self.db.clients.update_one({"id": client_id, "partner_id": partner_id}, {"$pull": {"services": {"id": service_id}}})
+        query = {
+            "id": client_id,
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }
+        result = await self.db.clients.update_one(query, {"$pull": {"services": {"id": service_id}}})
         return result.modified_count > 0
 
     async def update_service_breakdown_by_identifier(self, partner_id: str, client_id: str, service_name: str, price: float, breakdown_percentages: Dict[str, Any]) -> bool:
@@ -660,7 +707,11 @@ class Database:
         result = await self.db.clients.update_one(
             {
                 "id": client_id, 
-                "partner_id": partner_id, 
+                "$or": [
+                    {"partner_id": partner_id},
+                    {"execution_partner_id": partner_id},
+                    {"referral_partner_id": partner_id}
+                ],
                 "services.service_name": service_name,
                 "services.price": price
             }, 
@@ -673,34 +724,108 @@ class Database:
         if self.db is None:
             await self.connect()
         
-        # Get full client data with services for proper breakdown calculation
-        clients = await self.db.clients.find({"partner_id": partner_id}).to_list(None)
+        # Get full client data where partner is execution/referral or owner
+        clients = await self.db.clients.find({
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ]
+        }).to_list(None)
         
         total_revenue = 0
+        total_partner_revenue = 0
+        total_referral_revenue = 0
+        total_execution_revenue = 0
         by_client = []
         
         for client in clients:
             client_total = 0
-            # Calculate total from services
+            client_referral = 0
+            client_execution = 0
+            services_data = []
+
             if client.get("services"):
                 for service in client["services"]:
-                    client_total += float(service.get("price", 0))
-            
-            # Use closed_cost if available and higher
+                    price = float(service.get("price", 0))
+                    client_total += price
+                    breakdown = service.get("breakdown_percentages") or {
+                        "referral_percent": 10,
+                        "execution_percent": 80,
+                        "admin_percent": 10
+                    }
+                    referral_share = (price * breakdown.get("referral_percent", 10)) / 100
+                    execution_share = (price * breakdown.get("execution_percent", 80)) / 100
+
+                    role_referral = partner_id == client.get("referral_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
+                    role_execution = partner_id == client.get("execution_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
+
+                    service_referral = referral_share if role_referral else 0
+                    service_execution = execution_share if role_execution else 0
+
+                    client_referral += service_referral
+                    client_execution += service_execution
+                    services_data.append({
+                        "service_id": service.get("service_id"),
+                        "service_name": service.get("service_name"),
+                        "price": price,
+                        "referral_share": service_referral,
+                        "execution_share": service_execution,
+                        "breakdown_percentages": breakdown
+                    })
+
             closed_cost = float(client.get("closed_cost", 0))
-            if closed_cost > 0:
+            if (not client.get("services")) and closed_cost > 0:
                 client_total = max(client_total, closed_cost)
-            
+                breakdown = {
+                    "referral_percent": 10,
+                    "execution_percent": 80,
+                    "admin_percent": 10
+                }
+                referral_share = (closed_cost * breakdown["referral_percent"]) / 100
+                execution_share = (closed_cost * breakdown["execution_percent"]) / 100
+                role_referral = partner_id == client.get("referral_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
+                role_execution = partner_id == client.get("execution_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
+                client_referral += referral_share if role_referral else 0
+                client_execution += execution_share if role_execution else 0
+                services_data.append({
+                    "service_id": None,
+                    "service_name": "Closed Cost",
+                    "price": closed_cost,
+                    "referral_share": referral_share if role_referral else 0,
+                    "execution_share": execution_share if role_execution else 0,
+                    "breakdown_percentages": breakdown
+                })
+
             total_revenue += client_total
+            total_referral_revenue += client_referral
+            total_execution_revenue += client_execution
+            total_partner_revenue += client_referral + client_execution
+
             by_client.append({
                 "client_id": client["id"],
                 "client_name": client.get("full_name", ""),
                 "amount": client_total,
-                "services": client.get("services", [])
+                "referral_share": client_referral,
+                "execution_share": client_execution,
+                "services": services_data,
+                "referral_partner_id": client.get("referral_partner_id"),
+                "execution_partner_id": client.get("execution_partner_id"),
+                "role": (
+                    "both" if partner_id == client.get("execution_partner_id") == client.get("referral_partner_id") else
+                    "execution" if partner_id == client.get("execution_partner_id") else
+                    "referral" if partner_id == client.get("referral_partner_id") else
+                    "unknown"
+                )
             })
         
-        return {"total_revenue": total_revenue, "by_client": by_client}
-
+        return {
+            "total_revenue": total_revenue,
+            "partner_total_revenue": total_partner_revenue,
+            "referral_revenue": total_referral_revenue,
+            "execution_revenue": total_execution_revenue,
+            "by_client": by_client
+        }
     async def get_closed_cost_revenue_by_partner(self, partner_id: str) -> Dict[str, Any]:
         if self.db is None:
             await self.connect()

@@ -68,7 +68,8 @@ const Dashboard = () => {
     return { referralTotal, executionTotal, adminTotal };
   };
 
-  const partnerSharePercent = getPartnerSharePercent(partner?.category);
+  const partnerShareTotal = summary?.partner_total_revenue ?? 0;
+  const partnerSharePercent = summary?.total_revenue ? partnerShareTotal / summary.total_revenue : getPartnerSharePercent(partner?.category);
   const partnerShareLabel = getPartnerShareLabel(partner?.category);
 
   const fetchData = useCallback(async () => {
@@ -152,8 +153,8 @@ const Dashboard = () => {
         <Card className="p-6 hover:shadow-lg transition-shadow min-h-[150px]">
           <div className="flex items-center justify-between h-full">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency((summary?.total_revenue ?? 0) * partnerSharePercent)}</p>
+              <p className="text-sm font-medium text-gray-600">Your Revenue Share</p>
+              <p className="text-3xl font-bold mt-2 text-teal-600">{formatCurrency(partnerShareTotal)}</p>
             </div>
             <div className="p-3 bg-teal-100 rounded-full flex-shrink-0">
               <DollarSign className="h-8 w-8 text-teal-600" />
@@ -227,36 +228,28 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {summary?.by_client?.map(client =>
-                    client.services && client.services.length > 0
-                      ? client.services.map((service, idx) => {
-                          const price = parseFloat(service.price) || 0;
-                          const breakdown = service.breakdown_percentages || {
-                            referral_percent: 10,
-                            execution_percent: 80,
-                            admin_percent: 10
-                          };
-                          const referralPercent = breakdown.referral_percent || 10;
-                          const referralAmount = (price * referralPercent) / 100;
-                          
-                          return (
-                            <tr key={`referral-${client.client_id}-${idx}`} className="hover:bg-blue-50">
-                              <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{service.service_name || 'N/A'}</td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(price)}</td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-900">{referralPercent}%</td>
-                              <td className="px-4 py-3 text-sm text-right text-blue-600 font-semibold">
-                                {formatCurrency(referralAmount)}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      : (
-                        <tr key={`referral-${client.client_id}`} className="hover:bg-blue-50">
+                  {summary?.by_client?.flatMap(client =>
+                    (client.services || []).filter(service => parseFloat(service.referral_share || 0) > 0).map((service, idx) => {
+                      const price = parseFloat(service.price) || 0;
+                      const breakdown = service.breakdown_percentages || {
+                        referral_percent: 10,
+                        execution_percent: 80,
+                        admin_percent: 10
+                      };
+                      const referralPercent = breakdown.referral_percent || 10;
+
+                      return (
+                        <tr key={`referral-${client.client_id}-${idx}`} className="hover:bg-blue-50">
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
-                          <td colSpan="4" className="px-4 py-3 text-sm text-gray-500 italic">No services added</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{service.service_name || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(price)}</td>
+                          <td className="px-4 py-3 text-sm text-right text-gray-900">{referralPercent}%</td>
+                          <td className="px-4 py-3 text-sm text-right text-blue-600 font-semibold">
+                            {formatCurrency(parseFloat(service.referral_share || 0))}
+                          </td>
                         </tr>
-                      )
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -285,36 +278,28 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {summary?.by_client?.map(client =>
-                    client.services && client.services.length > 0
-                      ? client.services.map((service, idx) => {
-                          const price = parseFloat(service.price) || 0;
-                          const breakdown = service.breakdown_percentages || {
-                            referral_percent: 10,
-                            execution_percent: 80,
-                            admin_percent: 10
-                          };
-                          const executionPercent = breakdown.execution_percent || 80;
-                          const executionAmount = (price * executionPercent) / 100;
-                          
-                          return (
-                            <tr key={`execution-${client.client_id}-${idx}`} className="hover:bg-green-50">
-                              <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{service.service_name || 'N/A'}</td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(price)}</td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-900">{executionPercent}%</td>
-                              <td className="px-4 py-3 text-sm text-right text-green-600 font-semibold">
-                                {formatCurrency(executionAmount)}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      : (
-                        <tr key={`execution-${client.client_id}`} className="hover:bg-green-50">
+                  {summary?.by_client?.flatMap(client =>
+                    (client.services || []).filter(service => parseFloat(service.execution_share || 0) > 0).map((service, idx) => {
+                      const price = parseFloat(service.price) || 0;
+                      const breakdown = service.breakdown_percentages || {
+                        referral_percent: 10,
+                        execution_percent: 80,
+                        admin_percent: 10
+                      };
+                      const executionPercent = breakdown.execution_percent || 80;
+
+                      return (
+                        <tr key={`execution-${client.client_id}-${idx}`} className="hover:bg-green-50">
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">{client.client_name}</td>
-                          <td colSpan="4" className="px-4 py-3 text-sm text-gray-500 italic">No services added</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{service.service_name || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(price)}</td>
+                          <td className="px-4 py-3 text-sm text-right text-gray-900">{executionPercent}%</td>
+                          <td className="px-4 py-3 text-sm text-right text-green-600 font-semibold">
+                            {formatCurrency(parseFloat(service.execution_share || 0))}
+                          </td>
                         </tr>
-                      )
+                      );
+                    })
                   )}
                 </tbody>
               </table>

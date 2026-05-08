@@ -6,9 +6,12 @@ import { usePartnerAuth } from '../../contexts/PartnerAuthContext';
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 const ClientsManagement = () => {
-  const { token } = usePartnerAuth();
+  const { token, partner } = usePartnerAuth();
   const [clients, setClients] = useState([]);
+  const [partners, setPartners] = useState([]);
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', company: '' });
+  const [selectedReferralPartner, setSelectedReferralPartner] = useState('');
+  const [selectedExecutionPartner, setSelectedExecutionPartner] = useState('');
   const [creating, setCreating] = useState(false);
 
   const fetchClients = useCallback(async () => {
@@ -22,12 +25,28 @@ const ClientsManagement = () => {
 
   useEffect(() => { if (token) fetchClients(); }, [token, fetchClients]);
 
+  const fetchPartners = useCallback(async () => {
+    try {
+      const res = await axios.get(`${BACKEND}/api/partner/partners`, { headers: { Authorization: `Bearer ${token}` } });
+      setPartners(res.data.data || []);
+    } catch (e) {
+      console.error('Failed to load partner list:', e);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) fetchPartners(); }, [token, fetchPartners]);
+
   const createClient = async (e) => {
     e.preventDefault();
     if (creating) return;
     setCreating(true);
     try {
-      const response = await axios.post(`${BACKEND}/api/partner/clients`, form, { headers: { Authorization: `Bearer ${token}` } });
+      const payload = {
+        ...form,
+        ...(selectedReferralPartner ? { referral_partner_id: selectedReferralPartner } : {}),
+        ...(selectedExecutionPartner ? { execution_partner_id: selectedExecutionPartner } : {})
+      };
+      const response = await axios.post(`${BACKEND}/api/partner/clients`, payload, { headers: { Authorization: `Bearer ${token}` } });
       console.log('Client creation response:', response);
       const createdClient = response?.data?.data;
       if (!createdClient) {
@@ -36,6 +55,8 @@ const ClientsManagement = () => {
       }
       setClients((prevClients) => [createdClient, ...prevClients]);
       setForm({ full_name: '', email: '', phone: '', company: '' });
+      setSelectedReferralPartner('');
+      setSelectedExecutionPartner('');
       toast.success('Client added successfully');
       // Refresh the list in background without affecting success
       fetchClients().catch((refreshErr) => {
@@ -73,6 +94,30 @@ const ClientsManagement = () => {
             <input value={form.email} onChange={e=>setForm({...form, email: e.target.value})} placeholder="Email" className="w-full p-2 border rounded" />
             <input value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} placeholder="Phone" className="w-full p-2 border rounded" />
             <input value={form.company} onChange={e=>setForm({...form, company: e.target.value})} placeholder="Company" className="w-full p-2 border rounded" />
+            {(partner?.category === 'execution' || partner?.category === 'both') && (
+              <select
+                value={selectedReferralPartner}
+                onChange={e => setSelectedReferralPartner(e.target.value)}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Referral Partner (optional)</option>
+                {partners.filter(p => p.category === 'referral' || p.category === 'both').map(p => (
+                  <option key={p.id} value={p.id}>{p.name || p.username} ({p.category})</option>
+                ))}
+              </select>
+            )}
+            {(partner?.category === 'referral' || partner?.category === 'both') && (
+              <select
+                value={selectedExecutionPartner}
+                onChange={e => setSelectedExecutionPartner(e.target.value)}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Execution Partner (optional)</option>
+                {partners.filter(p => p.category === 'execution' || p.category === 'both').map(p => (
+                  <option key={p.id} value={p.id}>{p.name || p.username} ({p.category})</option>
+                ))}
+              </select>
+            )}
             <button className="w-full bg-orange-500 text-white py-2 rounded" disabled={creating}>
               {creating ? 'Creating...' : 'Create'}
             </button>
