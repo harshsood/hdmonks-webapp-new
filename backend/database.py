@@ -725,6 +725,8 @@ class Database:
             await self.connect()
         
         # Get full client data where partner is execution/referral or owner
+        partner = await self.get_partner_by_id(partner_id)
+        partner_category = (partner.get("category") or "").lower() if partner else ""
         clients = await self.db.clients.find({
             "$or": [
                 {"partner_id": partner_id},
@@ -757,8 +759,16 @@ class Database:
                     referral_share = (price * breakdown.get("referral_percent", 10)) / 100
                     execution_share = (price * breakdown.get("execution_percent", 80)) / 100
 
-                    role_referral = partner_id == client.get("referral_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
-                    role_execution = partner_id == client.get("execution_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
+                    role_referral = (
+                        partner_id == client.get("referral_partner_id") or
+                        (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
+                        (partner_id == client.get("partner_id") and partner_category in ["referral", "both"] and not client.get("referral_partner_id"))
+                    )
+                    role_execution = (
+                        partner_id == client.get("execution_partner_id") or
+                        (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
+                        (partner_id == client.get("partner_id") and partner_category in ["execution", "both"] and not client.get("execution_partner_id"))
+                    )
 
                     service_referral = referral_share if role_referral else 0
                     service_execution = execution_share if role_execution else 0
@@ -784,17 +794,16 @@ class Database:
                 }
                 referral_share = (closed_cost * breakdown["referral_percent"]) / 100
                 execution_share = (closed_cost * breakdown["execution_percent"]) / 100
-                role_referral = partner_id == client.get("referral_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
-                role_execution = partner_id == client.get("execution_partner_id") or (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id"))
-                client_referral += referral_share if role_referral else 0
-                client_execution += execution_share if role_execution else 0
-                services_data.append({
-                    "service_id": None,
-                    "service_name": "Closed Cost",
-                    "price": closed_cost,
-                    "referral_share": referral_share if role_referral else 0,
-                    "execution_share": execution_share if role_execution else 0,
-                    "breakdown_percentages": breakdown
+                    role_referral = (
+                        partner_id == client.get("referral_partner_id") or
+                        (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
+                        (partner_id == client.get("partner_id") and partner_category in ["referral", "both"] and not client.get("referral_partner_id"))
+                    )
+                    role_execution = (
+                        partner_id == client.get("execution_partner_id") or
+                        (partner_id == client.get("execution_partner_id") == client.get("referral_partner_id")) or
+                        (partner_id == client.get("partner_id") and partner_category in ["execution", "both"] and not client.get("execution_partner_id"))
+                    )
                 })
 
             total_revenue += client_total
