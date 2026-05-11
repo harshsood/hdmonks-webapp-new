@@ -17,7 +17,7 @@ from models import (
     SettingsUpdate,
     Partner, PartnerCreate, PartnerUpdate,
     Client, ClientCreate, ClientUpdate,
-    ClientServiceCreate, ClientServiceUpdate
+    ClientServiceCreate, ClientServiceUpdate, AdminClientServiceUpdate
 )
 from database import database
 from admin_auth import verify_password, create_session, verify_session, delete_session
@@ -720,18 +720,32 @@ async def update_client_service_admin(
     partner_id: str,
     client_id: str,
     service_id: str,
-    service_update: ClientServiceUpdate,
+    service_update: AdminClientServiceUpdate,
     session: dict = Depends(verify_admin_token)
 ):
-    """Update a client service price and/or breakdown percentages"""
+    """Update a client service price and/or breakdown percentages and assign referral/execution partners"""
     try:
-        update_data = {k: v for k, v in service_update.dict().items() if v is not None}
-        if not update_data:
+        service_data = service_update.dict(exclude_none=True, exclude={"referral_partner_id", "execution_partner_id"})
+        client_update_data = {}
+
+        if service_update.referral_partner_id is not None:
+            client_update_data["referral_partner_id"] = service_update.referral_partner_id or None
+        if service_update.execution_partner_id is not None:
+            client_update_data["execution_partner_id"] = service_update.execution_partner_id or None
+
+        if not service_data and not client_update_data:
             raise HTTPException(status_code=400, detail="No update data provided")
 
-        success = await database.update_client_service(partner_id, client_id, service_id, update_data)
-        if not success:
-            raise HTTPException(status_code=404, detail="Service not found")
+        if service_data:
+            success = await database.update_client_service(partner_id, client_id, service_id, service_data)
+            if not success:
+                raise HTTPException(status_code=404, detail="Service not found")
+
+        if client_update_data:
+            client_update_data["updated_at"] = datetime.utcnow().isoformat()
+            client_success = await database.update_client(partner_id, client_id, client_update_data)
+            if not client_success:
+                raise HTTPException(status_code=404, detail="Client not found")
 
         return {"success": True, "message": "Service updated successfully"}
     except HTTPException:

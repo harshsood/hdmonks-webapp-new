@@ -35,11 +35,14 @@ const PartnerRevenueBreakdown = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState(null);
+  const [partnersList, setPartnersList] = useState([]);
   const [serviceForm, setServiceForm] = useState({
     price: 0,
     referral_percent: 10,
     execution_percent: 80,
     admin_percent: 10,
+    referral_partner_id: '',
+    execution_partner_id: '',
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -79,14 +82,26 @@ const PartnerRevenueBreakdown = () => {
     }
   }, [partnerId]);
 
+  const fetchPartners = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await axios.get(`${API}/partners`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPartnersList(res.data.data || []);
+    } catch (error) {
+      toast.error('Failed to load partner list');
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchPartner(), fetchClients(), fetchSummary()]);
+      await Promise.all([fetchPartner(), fetchClients(), fetchSummary(), fetchPartners()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchPartner, fetchClients, fetchSummary]);
+  }, [fetchPartner, fetchClients, fetchSummary, fetchPartners]);
 
   useEffect(() => {
     if (clientId) {
@@ -109,6 +124,8 @@ const PartnerRevenueBreakdown = () => {
       referral_percent: breakdown.referral_percent,
       execution_percent: breakdown.execution_percent,
       admin_percent: breakdown.admin_percent,
+      referral_partner_id: client.referral_partner_id || '',
+      execution_partner_id: client.execution_partner_id || '',
     });
     setIsEditModalOpen(true);
   };
@@ -127,17 +144,25 @@ const PartnerRevenueBreakdown = () => {
       const token = localStorage.getItem('admin_token');
       const clientId = editingService.client.id;
       const serviceId = editingService.service.id || editingService.service.service_id;
+      const updatePayload = {
+        price: parseFloat(serviceForm.price) || 0,
+        breakdown_percentages: {
+          referral_percent: parseFloat(serviceForm.referral_percent) || 0,
+          execution_percent: parseFloat(serviceForm.execution_percent) || 0,
+          admin_percent: parseFloat(serviceForm.admin_percent) || 0,
+        }
+      };
+
+      if (serviceForm.referral_partner_id !== undefined) {
+        updatePayload.referral_partner_id = serviceForm.referral_partner_id || null;
+      }
+      if (serviceForm.execution_partner_id !== undefined) {
+        updatePayload.execution_partner_id = serviceForm.execution_partner_id || null;
+      }
 
       await axios.put(
         `${API}/partners/${partnerId}/clients/${clientId}/services/${serviceId}`,
-        {
-          price: parseFloat(serviceForm.price) || 0,
-          breakdown_percentages: {
-            referral_percent: parseFloat(serviceForm.referral_percent) || 0,
-            execution_percent: parseFloat(serviceForm.execution_percent) || 0,
-            admin_percent: parseFloat(serviceForm.admin_percent) || 0,
-          }
-        },
+        updatePayload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -300,6 +325,32 @@ const PartnerRevenueBreakdown = () => {
                   onChange={(e) => setServiceForm({ ...serviceForm, price: parseFloat(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Referral Partner</label>
+                <select
+                  value={serviceForm.referral_partner_id}
+                  onChange={(e) => setServiceForm({ ...serviceForm, referral_partner_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Select Referral Partner (optional)</option>
+                  {partnersList.filter(p => p.category === 'referral' || p.category === 'both').map((p) => (
+                    <option key={p.id} value={p.id}>{p.name || p.username} ({p.category})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Execution Partner</label>
+                <select
+                  value={serviceForm.execution_partner_id}
+                  onChange={(e) => setServiceForm({ ...serviceForm, execution_partner_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Select Execution Partner (optional)</option>
+                  {partnersList.filter(p => p.category === 'execution' || p.category === 'both').map((p) => (
+                    <option key={p.id} value={p.id}>{p.name || p.username} ({p.category})</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Referral (%)</label>

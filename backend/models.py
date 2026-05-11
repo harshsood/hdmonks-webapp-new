@@ -477,6 +477,11 @@ class ClientServiceUpdate(BaseModel):
     breakdown_percentages: Optional[dict] = None
 
 
+class AdminClientServiceUpdate(ClientServiceUpdate):
+    execution_partner_id: Optional[str] = None
+    referral_partner_id: Optional[str] = None
+
+
 # Analytics Model
 class Analytics(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
