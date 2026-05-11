@@ -352,29 +352,6 @@ const PartnerRevenueBreakdown = () => {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setServiceForm({
-                    ...serviceForm,
-                    execution_partner_id: serviceForm.referral_partner_id,
-                  })}
-                  className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                >
-                  Use referral partner as execution
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setServiceForm({
-                    ...serviceForm,
-                    referral_partner_id: serviceForm.execution_partner_id,
-                    execution_partner_id: serviceForm.referral_partner_id,
-                  })}
-                  className="px-3 py-2 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700"
-                >
-                  Swap referral/execution partners
-                </button>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Referral (%)</label>
                 <input
