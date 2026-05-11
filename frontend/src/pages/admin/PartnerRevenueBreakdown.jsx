@@ -27,10 +27,11 @@ const formatCurrency = (amount) =>
   }).format(amount || 0);
 
 const PartnerRevenueBreakdown = () => {
-  const { partnerId } = useParams();
+  const { partnerId, clientId } = useParams();
   const navigate = useNavigate();
   const [partner, setPartner] = useState(null);
   const [clients, setClients] = useState([]);
+  const [filteredClients, setFilteredClients] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState(null);
@@ -86,6 +87,15 @@ const PartnerRevenueBreakdown = () => {
     };
     loadData();
   }, [fetchPartner, fetchClients, fetchSummary]);
+
+  useEffect(() => {
+    if (clientId) {
+      const filtered = clients.filter(client => client.id === clientId);
+      setFilteredClients(filtered);
+    } else {
+      setFilteredClients(clients);
+    }
+  }, [clients, clientId]);
 
   const openEditServiceModal = (client, service) => {
     const breakdown = service.breakdown_percentages || {
@@ -156,7 +166,9 @@ const PartnerRevenueBreakdown = () => {
     );
   }
 
-  const partnerRevenue = summary?.partner_total_revenue ?? 0;
+  const partnerSharePercent = getPartnerSharePercent(partner?.category);
+  const partnerRevenue = (summary?.total_revenue || 0) * partnerSharePercent;
+  const displayClients = clientId ? filteredClients : clients;
 
   return (
     <div className="space-y-6">
@@ -166,7 +178,9 @@ const PartnerRevenueBreakdown = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Revenue Breakdown</h1>
-          <p className="text-gray-600">Review and edit service prices and revenue shares for {partner?.name || partner?.username || 'Partner'}.</p>
+          <p className="text-gray-600">
+            {clientId ? `Revenue breakdown for ${filteredClients[0]?.full_name || 'Client'}` : `Review and edit service prices and revenue shares for ${partner?.name || partner?.username || 'Partner'}.`}
+          </p>
         </div>
       </div>
 
@@ -180,13 +194,13 @@ const PartnerRevenueBreakdown = () => {
           <p className="text-3xl font-bold mt-3 text-teal-600">{formatCurrency(partnerRevenue)}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-gray-600">Active Clients</p>
-          <p className="text-3xl font-bold mt-3 text-blue-600">{clients.length}</p>
+          <p className="text-sm text-gray-600">{clientId ? 'Selected Client' : 'Active Clients'}</p>
+          <p className="text-3xl font-bold mt-3 text-blue-600">{displayClients.length}</p>
         </Card>
       </div>
 
       <div className="space-y-6">
-        {clients.map((client) => {
+        {displayClients.map((client) => {
           const clientTotal = (client.services || []).reduce((sum, service) => sum + (parseFloat(service.price) || 0), 0);
           const closedCost = parseFloat(client.closed_cost || 0);
           const displayTotal = closedCost > 0 ? Math.max(clientTotal, closedCost) : clientTotal;

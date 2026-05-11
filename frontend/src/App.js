@@ -58,6 +58,7 @@ function App() {
               <Route path="stages" element={<StagesManagement />} />
               <Route path="partners" element={<PartnersManagement />} />
               <Route path="partners/:partnerId/breakdown" element={<PartnerRevenueBreakdown />} />
+              <Route path="partners/:partnerId/clients/:clientId/breakdown" element={<PartnerRevenueBreakdown />} />
               <Route path="inquiries" element={<InquiriesManagement />} />
               <Route path="bookings" element={<BookingsManagement />} />
               <Route path="timeslots" element={<TimeSlotsManagement />} />
