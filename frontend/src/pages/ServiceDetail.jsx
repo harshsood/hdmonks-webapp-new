@@ -73,7 +73,12 @@ const ServiceDetail = () => {
       }
     } catch (error) {
       console.error('Error fetching service:', error);
-      toast.error('Service not found');
+      const status = error.response?.status;
+      if (status === 404) {
+        toast.error('Service not found');
+      } else {
+        toast.error('Unable to load service details');
+      }
       setTimeout(() => navigate('/'), 2000);
     } finally {
       setLoading(false);

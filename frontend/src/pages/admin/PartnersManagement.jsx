@@ -99,6 +99,22 @@ const PartnersManagement = () => {
     return 0.8;
   };
 
+  const buildClientPayload = (data) => {
+    const payload = { ...data };
+
+    if (payload.email === '') {
+      delete payload.email;
+    }
+
+    if (payload.closed_cost === '' || payload.closed_cost === null || payload.closed_cost === undefined) {
+      delete payload.closed_cost;
+    } else {
+      payload.closed_cost = Number(payload.closed_cost) || 0;
+    }
+
+    return payload;
+  };
+
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -219,27 +235,36 @@ const PartnersManagement = () => {
 
   const handleClientSubmit = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem('admin_token');
+    const partnerId = getId(selectedPartner);
+
+    if (!partnerId) {
+      toast.error('Please select a partner before adding a client');
+      return;
+    }
+
+    const payload = buildClientPayload(clientFormData);
+
     try {
-      const token = localStorage.getItem('admin_token');
-      const partnerId = getId(selectedPartner);
       const clientId = getId(editingClient);
       if (editingClient) {
-        await axios.put(`${API}/partners/${partnerId}/clients/${clientId}`, clientFormData, {
+        await axios.put(`${API}/partners/${partnerId}/clients/${clientId}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Client updated');
       } else {
-        await axios.post(`${API}/partners/${partnerId}/clients`, clientFormData, {
+        await axios.post(`${API}/partners/${partnerId}/clients`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Client added');
       }
       setIsClientModalOpen(false);
-      fetchClients(partnerId);
       setClientFormData({ full_name: '', email: '', phone: '', company: '', closed_cost: 0 });
       setEditingClient(null);
+      await fetchClients(partnerId);
     } catch (error) {
-      toast.error('Failed to save client');
+      const message = error.response?.data?.detail || error.message || 'Failed to save client';
+      toast.error(message);
     }
   };
 
@@ -516,6 +541,18 @@ const PartnersManagement = () => {
               placeholder="Company"
               value={clientFormData.company}
               onChange={e => setClientFormData({...clientFormData, company: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Closed Cost"
+              value={clientFormData.closed_cost === 0 ? '' : clientFormData.closed_cost}
+              onChange={e => setClientFormData({
+                ...clientFormData,
+                closed_cost: parseInt(e.target.value.replace(/\D/g, ''), 10) || 0
+              })}
               className="w-full px-3 py-2 border rounded-lg"
             />
             <Button type="submit" className="w-full bg-orange-500">
