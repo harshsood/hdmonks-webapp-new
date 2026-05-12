@@ -321,14 +321,14 @@ const PartnersManagement = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="execution" className="w-full">
+      <Tabs defaultValue="both" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="both">Both Partners</TabsTrigger>
           <TabsTrigger value="execution">Execution Partners</TabsTrigger>
           <TabsTrigger value="referral">Referral Partners</TabsTrigger>
-          <TabsTrigger value="both">Both Partners</TabsTrigger>
         </TabsList>
 
-        {['execution', 'referral', 'both'].map(category => (
+        {['both', 'execution', 'referral'].map(category => (
           <TabsContent key={category} value={category} className="space-y-4">
             {!selectedPartner || selectedPartner.category !== category ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -677,6 +677,11 @@ class Database:
 
         # Fallback to matching by assigned service_id if the service document lacks id
         result = await self.db.clients.update_one({**query_base, "services.service_id": service_id}, {"$set": set_query})
+        if result.modified_count > 0:
+            return True
+
+        # Additional fallback: match by service_name in case the path parameter is a service name
+        result = await self.db.clients.update_one({**query_base, "services.service_name": service_id}, {"$set": set_query})
         return result.modified_count > 0
 
     async def delete_client_service(self, partner_id: str, client_id: str, service_id: str) -> bool:
@@ -699,24 +704,32 @@ class Database:
             await self.connect()
         logger.info(f"Updating breakdown for service {service_name} (price: {price}) in client {client_id}")
         
-        # Use positional operator to match the service by name and price
+        # Normalize price if it was passed as a string
+        normalized_price = None
+        if price is not None:
+            try:
+                normalized_price = float(price)
+            except (TypeError, ValueError):
+                normalized_price = None
+
+        # Use positional operator to match the service by name and price when available
         set_query = {f"services.$.breakdown_percentages": breakdown_percentages}
-        logger.info(f"Query: id={client_id}, partner_id={partner_id}, services.service_name={service_name}, services.price={price}")
+        query = {
+            "id": client_id,
+            "$or": [
+                {"partner_id": partner_id},
+                {"execution_partner_id": partner_id},
+                {"referral_partner_id": partner_id}
+            ],
+            "services.service_name": service_name
+        }
+        if normalized_price is not None:
+            query["services.price"] = normalized_price
+
+        logger.info(f"Query: {query}")
         logger.info(f"Update: {set_query}")
         
-        result = await self.db.clients.update_one(
-            {
-                "id": client_id, 
-                "$or": [
-                    {"partner_id": partner_id},
-                    {"execution_partner_id": partner_id},
-                    {"referral_partner_id": partner_id}
-                ],
-                "services.service_name": service_name,
-                "services.price": price
-            }, 
-            {"$set": set_query}
-        )
+        result = await self.db.clients.update_one(query, {"$set": set_query})
         logger.info(f"Update result - matched: {result.matched_count}, modified: {result.modified_count}")
         return result.modified_count > 0
 
