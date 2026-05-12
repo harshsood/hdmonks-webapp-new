@@ -670,19 +670,26 @@ class Database:
             ]
         }
 
-        # First try matching by internal service document ID
-        result = await self.db.clients.update_one({**query_base, "services.id": service_id}, {"$set": set_query})
-        if result.modified_count > 0:
-            return True
+        # Normalize the path identifier into a string for fallback matching
+        identifier = str(service_id) if service_id is not None else None
 
-        # Fallback to matching by assigned service_id if the service document lacks id
-        result = await self.db.clients.update_one({**query_base, "services.service_id": service_id}, {"$set": set_query})
-        if result.modified_count > 0:
-            return True
+        # Try matching by internal service document ID first
+        if identifier is not None:
+            result = await self.db.clients.update_one({**query_base, "services.id": identifier}, {"$set": set_query})
+            if result.modified_count > 0:
+                return True
 
-        # Additional fallback: match by service_name in case the path parameter is a service name
-        result = await self.db.clients.update_one({**query_base, "services.service_name": service_id}, {"$set": set_query})
-        return result.modified_count > 0
+            # Fallback to matching by assigned service_id
+            result = await self.db.clients.update_one({**query_base, "services.service_id": identifier}, {"$set": set_query})
+            if result.modified_count > 0:
+                return True
+
+            # Additional fallback: match by service_name when the provided identifier is a name
+            result = await self.db.clients.update_one({**query_base, "services.service_name": identifier}, {"$set": set_query})
+            if result.modified_count > 0:
+                return True
+        
+        return False
 
     async def delete_client_service(self, partner_id: str, client_id: str, service_id: str) -> bool:
         if self.db is None:

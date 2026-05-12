@@ -143,7 +143,7 @@ const PartnerRevenueBreakdown = () => {
 
       const token = localStorage.getItem('admin_token');
       const clientId = editingService.client.id;
-      const serviceId = editingService.service.id || editingService.service.service_id;
+      const serviceId = editingService.service.id || editingService.service.service_id || editingService.service.service_name;
       const updatePayload = {
         price: parseFloat(serviceForm.price) || 0,
         breakdown_percentages: {
