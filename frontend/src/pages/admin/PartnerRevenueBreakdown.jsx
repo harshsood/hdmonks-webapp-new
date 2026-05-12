@@ -144,20 +144,42 @@ const PartnerRevenueBreakdown = () => {
       const token = localStorage.getItem('admin_token');
       const clientId = editingService.client.id;
       const serviceId = editingService.service.id || editingService.service.service_id;
-      const updatePayload = {
-        price: Number(serviceForm.price) || 0,
-        breakdown_percentages: {
-          referral_percent: Number(serviceForm.referral_percent) || 0,
-          execution_percent: Number(serviceForm.execution_percent) || 0,
-          admin_percent: Number(serviceForm.admin_percent) || 0,
-        }
+      const existingService = editingService.service;
+      const existingBreakdown = existingService.breakdown_percentages || {
+        referral_percent: 10,
+        execution_percent: 80,
+        admin_percent: 10
       };
+
+      const normalizedPrice = Number(serviceForm.price) || 0;
+      const normalizedBreakdown = {
+        referral_percent: Number(serviceForm.referral_percent) || 0,
+        execution_percent: Number(serviceForm.execution_percent) || 0,
+        admin_percent: Number(serviceForm.admin_percent) || 0,
+      };
+
+      const updatePayload = {};
+      const priceChanged = normalizedPrice !== Number(existingService.price || 0);
+      const breakdownChanged =
+        normalizedBreakdown.referral_percent !== Number(existingBreakdown.referral_percent || 0) ||
+        normalizedBreakdown.execution_percent !== Number(existingBreakdown.execution_percent || 0) ||
+        normalizedBreakdown.admin_percent !== Number(existingBreakdown.admin_percent || 0);
+
+      if (priceChanged || breakdownChanged) {
+        updatePayload.price = normalizedPrice;
+        updatePayload.breakdown_percentages = normalizedBreakdown;
+      }
 
       if (serviceForm.referral_partner_id !== undefined) {
         updatePayload.referral_partner_id = serviceForm.referral_partner_id || null;
       }
       if (serviceForm.execution_partner_id !== undefined) {
         updatePayload.execution_partner_id = serviceForm.execution_partner_id || null;
+      }
+
+      if (Object.keys(updatePayload).length === 0) {
+        toast.error('No changes detected to save');
+        return;
       }
 
       await axios.put(
