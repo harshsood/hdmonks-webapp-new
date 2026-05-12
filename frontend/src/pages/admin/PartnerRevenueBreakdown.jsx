@@ -143,13 +143,13 @@ const PartnerRevenueBreakdown = () => {
 
       const token = localStorage.getItem('admin_token');
       const clientId = editingService.client.id;
-      const serviceId = editingService.service.id || editingService.service.service_id || editingService.service.service_name;
+      const serviceId = editingService.service.id || editingService.service.service_id;
       const updatePayload = {
-        price: parseFloat(serviceForm.price) || 0,
+        price: Number(serviceForm.price) || 0,
         breakdown_percentages: {
-          referral_percent: parseFloat(serviceForm.referral_percent) || 0,
-          execution_percent: parseFloat(serviceForm.execution_percent) || 0,
-          admin_percent: parseFloat(serviceForm.admin_percent) || 0,
+          referral_percent: Number(serviceForm.referral_percent) || 0,
+          execution_percent: Number(serviceForm.execution_percent) || 0,
+          admin_percent: Number(serviceForm.admin_percent) || 0,
         }
       };
 
@@ -318,11 +318,14 @@ const PartnerRevenueBreakdown = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={serviceForm.price}
-                  onChange={(e) => setServiceForm({ ...serviceForm, price: parseFloat(e.target.value) || 0 })}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={serviceForm.price === 0 ? '' : serviceForm.price}
+                  onChange={(e) => setServiceForm({
+                    ...serviceForm,
+                    price: parseInt(e.target.value.replace(/\D/g, ''), 10) || 0
+                  })}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
