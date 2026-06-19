@@ -218,14 +218,7 @@ const Home = () => {
 
           {/* Stages Timeline */}
           <div className="space-y-8">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
-                  <p className="mt-2 text-sm text-gray-600">Loading services...</p>
-                </div>
-              </div>
-            ) : filteredStages.length > 0 ? (
+            {filteredStages.length > 0 ? (
               filteredStages.map((stage, index) => (
               <div
                 key={stage.id}
