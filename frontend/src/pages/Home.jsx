@@ -22,7 +22,8 @@ import {
   Target,
   LineChart,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import { testimonials } from '../data/mock';
 import Header from '../components/Header';
@@ -58,16 +59,60 @@ const iconMap = {
   LineChart
 };
 
+const businessStructureComparison = [
+  ['No. of Owners / Members', '1', '2–50 partners', '2–50 partners', '2+ partners', '2+ shareholders', '1 shareholder'],
+  ['Minimum Directors / Designated Partners', 'Not applicable', 'Not applicable', 'Not applicable', '2 designated partners', '2 directors', '1 director'],
+  ['Separate Legal Entity', '❌ No', '❌ No', '❌ No', '✅ Yes', '✅ Yes', '✅ Yes'],
+  ['Limited Liability', '❌ No', '❌ No', '❌ No', '✅ Yes', '✅ Yes', '✅ Yes'],
+  ['Registration', 'Generally no incorporation', 'Partnership deed; registration optional', 'Registered with Registrar of Firms', 'Mandatory with MCA', 'Mandatory with MCA', 'Mandatory with MCA'],
+  ['Governing Law', 'No separate incorporation law', 'Indian Partnership Act, 1932', 'Indian Partnership Act, 1932', 'LLP Act, 2008', 'Companies Act, 2013', 'Companies Act, 2013'],
+  ['Separate PAN', '❌ No separate entity PAN', '❌ No separate entity PAN', '❌ No separate entity PAN', '✅ Yes', '✅ Yes', '✅ Yes'],
+  ['Perpetual Succession', '❌ No', '❌ No', '❌ No', '✅ Yes', '✅ Yes', '✅ Yes'],
+  ['Liability of Owner(s)', 'Unlimited', 'Unlimited', 'Unlimited', 'Limited to agreed contribution', 'Limited to shareholding', 'Limited to shareholding'],
+  ['Compliance Level', '⭐ Very Low', '⭐ Low', '⭐⭐ Low–Moderate', '⭐⭐ Moderate', '⭐⭐⭐ High', '⭐⭐⭐ High'],
+  ['Annual ROC/MCA Filing', '❌ No', '❌ No', '❌ No MCA filing*', '✅ Yes', '✅ Yes', '✅ Yes'],
+  ['Audit Requirement', 'Based on applicable tax rules', 'Based on applicable tax rules', 'Based on applicable tax rules', 'Based on applicable thresholds', 'Generally statutory audit mandatory', 'Generally statutory audit mandatory'],
+  ['Ownership Transfer', 'Difficult / not applicable', 'Relatively difficult', 'Relatively difficult', 'Relatively easier', 'Relatively easy through shares', 'Restricted compared with Pvt Ltd'],
+  ['Fundraising / Investors', '❌ Limited', '❌ Limited', '❌ Limited', '⚠️ Moderate', '✅ Excellent', '⚠️ Limited'],
+  ['Can Issue Shares?', '❌ No', '❌ No', '❌ No', '❌ No', '✅ Yes', '✅ Yes'],
+  ['Suitable For', 'Individual freelancers, small businesses', 'Small businesses with partners', 'Businesses wanting a registered partnership', 'Professional firms, startups, SMEs', 'Startups, growing businesses, investors', 'Solo entrepreneurs wanting corporate structure'],
+  ['Typical Setup Complexity', '⭐ Very Easy', '⭐ Easy', '⭐⭐ Easy–Moderate', '⭐⭐⭐ Moderate', '⭐⭐⭐ Moderate–High', '⭐⭐⭐ Moderate–High'],
+  ['Best For', 'Single-person small business', 'Small partnership based on mutual trust', 'Partnership wanting registration benefits', 'Limited liability + partnership flexibility', 'Growth, funding & credibility', 'One-person business wanting Pvt Ltd status']
+];
+
+const businessStructureColumns = [
+  'Key Difference',
+  'Proprietorship',
+  'Partnership – Non-Registered',
+  'Partnership – Registered',
+  'LLP',
+  'Private Limited Company – 2 Directors',
+  'OPC Pvt. Ltd. – 1 Director'
+];
+
 const Home = () => {
   const [businessType, setBusinessType] = useState('startup');
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
+  const [hasShownComparison, setHasShownComparison] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchStages();
   }, []);
+
+  useEffect(() => {
+    if (!isComparisonOpen) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsComparisonOpen(false);
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isComparisonOpen]);
 
   const fetchStages = async () => {
     try {
@@ -249,6 +294,12 @@ const Home = () => {
                               <div
                                 key={service.id}
                                 onClick={() => navigate(`/service/${service.service_id}`)}
+                                onMouseEnter={() => {
+                                  if (service.name === 'Company Formation' && !hasShownComparison) {
+                                    setHasShownComparison(true);
+                                    setIsComparisonOpen(true);
+                                  }
+                                }}
                                 className="group p-4 bg-gray-50 rounded-lg hover:bg-orange-50 cursor-pointer transition-all duration-200 border border-transparent hover:border-orange-200"
                               >
                                 <div className="flex items-start space-x-3">
@@ -453,6 +504,74 @@ const Home = () => {
       
       {/* Booking Calendar Modal */}
       <BookingCalendar isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} />
+
+      {/* Company Formation comparison modal */}
+      {isComparisonOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/70 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsComparisonOpen(false);
+          }}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-[ min(1400px, 96vw)] overflow-hidden rounded-xl bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="business-structure-comparison-title"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-orange-50 px-5 py-4 sm:px-7">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">Company Formation</p>
+                <h2 id="business-structure-comparison-title" className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+                  Comparison of Business Structures in India
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close comparison chart"
+                title="Close comparison chart"
+                onClick={() => setIsComparisonOpen(false)}
+                className="shrink-0 rounded-full p-2 text-gray-500 hover:bg-white hover:text-gray-900"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(90vh-100px)] overflow-auto px-5 py-5 sm:px-7">
+              <table className="min-w-[1280px] border-collapse text-left text-sm text-gray-700">
+                <thead>
+                  <tr>
+                    {businessStructureColumns.map((column, index) => (
+                      <th
+                        key={column}
+                        scope="col"
+                        className={`border border-gray-200 bg-gray-900 px-4 py-3 font-semibold text-white ${index === 0 ? 'sticky left-0 z-10 min-w-[220px]' : 'min-w-[170px]'}`}
+                      >
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {businessStructureComparison.map((row) => (
+                    <tr key={row[0]} className="even:bg-gray-50">
+                      {row.map((cell, index) => (
+                        <td
+                          key={`${row[0]}-${index}`}
+                          className={`border border-gray-200 px-4 py-3 align-top ${index === 0 ? 'sticky left-0 z-[1] bg-white font-semibold text-gray-900' : ''}`}
+                        >
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
