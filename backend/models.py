@@ -171,6 +171,26 @@ class AdminLogin(BaseModel):
     password: str
 
 
+# User account models
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    full_name: str
+    email: EmailStr
+    password_hash: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserRegister(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str = Field(min_length=8)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
 # Blog/Article Models
 class Blog(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

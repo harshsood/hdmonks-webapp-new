@@ -30,11 +30,15 @@ import ClientsManagement from "./pages/partner/ClientsManagement";
 import ClientDetail from "./pages/partner/ClientDetail";
 import ProtectedPartnerRoute from "./components/ProtectedPartnerRoute";
 import PartnerProfile from "./pages/partner/PartnerProfile";
+import { UserAuthProvider } from "./contexts/UserAuthContext";
+import ProtectedUserRoute from "./components/ProtectedUserRoute";
+import UserDashboard from "./pages/UserDashboard";
 
 function App() {
   return (
     <SettingsProvider>
       <PartnerAuthProvider>
+      <UserAuthProvider>
       <AdminAuthProvider>
         <div className="App">
           <BrowserRouter>
@@ -42,6 +46,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/service/:serviceId" element={<ServiceDetail />} />
+            <Route path="/dashboard" element={<ProtectedUserRoute><UserDashboard /></ProtectedUserRoute>} />
             
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -89,6 +94,7 @@ function App() {
         </BrowserRouter>
         </div>
       </AdminAuthProvider>
+      </UserAuthProvider>
       </PartnerAuthProvider>
     </SettingsProvider>
   );

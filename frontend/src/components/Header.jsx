@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import { useUserAuth } from '../contexts/UserAuthContext';
+import UserAuthModal from './UserAuthModal';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { settings } = useSettings();
+  const { isAuthenticated } = useUserAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(location.state?.openUserAuth || false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,6 +58,13 @@ const Header = () => {
                 {link.name}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={() => isAuthenticated ? window.location.assign('/dashboard') : setAuthModalOpen(true)}
+              className={`text-sm font-medium transition-colors duration-200 hover:text-orange-500 ${isScrolled ? 'text-gray-700' : 'text-gray-800'}`}
+            >
+              {isAuthenticated ? 'Dashboard' : 'Login'}
+            </button>
             <a
               href="/#contact"
               className="px-6 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-all duration-200 hover:shadow-lg"
@@ -88,6 +99,13 @@ const Header = () => {
                 {link.name}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={() => { setIsMobileMenuOpen(false); if (isAuthenticated) window.location.assign('/dashboard'); else setAuthModalOpen(true); }}
+              className="block w-full rounded-lg px-4 py-2 text-left text-gray-700 transition-colors hover:bg-gray-100"
+            >
+              {isAuthenticated ? 'Dashboard' : 'Login'}
+            </button>
             <a
               href="/#contact"
               className="block px-4 py-2.5 bg-orange-500 text-white rounded-lg font-medium text-center hover:bg-orange-600 transition-colors"
@@ -98,6 +116,7 @@ const Header = () => {
           </div>
         </div>
       )}
+      <UserAuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </header>
   );
 };

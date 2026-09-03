@@ -324,6 +324,21 @@ class Database:
         admin_data['_id'] = str(result.inserted_id)
         return admin_data
 
+    # ===== USERS =====
+    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get a user by normalized email address"""
+        if self.db is None:
+            await self.connect()
+        return await self.db.users.find_one({"email": email.lower()}, {"_id": 0})
+
+    async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a user account"""
+        if self.db is None:
+            await self.connect()
+        user_data = self._serialize_datetime(user_data)
+        await self.db.users.insert_one(user_data)
+        return {key: value for key, value in user_data.items() if key != "password_hash"}
+
     # ===== BLOGS =====
     async def get_all_blogs(self, published_only: bool = False, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """Get all blogs"""

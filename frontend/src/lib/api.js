@@ -14,7 +14,11 @@ const apiClient = axios.create({
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('admin_token');
+    const token = config.url?.includes('/admin/')
+      ? localStorage.getItem('admin_token')
+      : config.url?.includes('/partner/')
+        ? localStorage.getItem('partner_token')
+        : localStorage.getItem('user_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,7 +34,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     // Handle authentication errors
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && error.config?.url?.includes('/admin/')) {
       localStorage.removeItem('admin_token');
       window.location.href = '/admin/login';
     }
