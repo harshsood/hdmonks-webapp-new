@@ -58,19 +58,19 @@ const Header = () => {
                 {link.name}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => isAuthenticated ? window.location.assign('/dashboard') : setAuthModalOpen(true)}
-              className={`text-sm font-medium transition-colors duration-200 hover:text-orange-500 ${isScrolled ? 'text-gray-700' : 'text-gray-800'}`}
-            >
-              {isAuthenticated ? 'Dashboard' : 'Login'}
-            </button>
             <a
               href="/#contact"
               className="px-6 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-all duration-200 hover:shadow-lg"
             >
               Get Started
             </a>
+            <button
+              type="button"
+              onClick={() => isAuthenticated ? window.location.assign('/dashboard') : setAuthModalOpen(true)}
+              className="rounded-lg border-2 border-orange-500 px-6 py-2 font-medium text-orange-600 transition-all duration-200 hover:bg-orange-500 hover:text-white hover:shadow-lg"
+            >
+              {isAuthenticated ? 'Dashboard' : 'Login'}
+            </button>
           </nav>
 
           <button
@@ -99,13 +99,6 @@ const Header = () => {
                 {link.name}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => { setIsMobileMenuOpen(false); if (isAuthenticated) window.location.assign('/dashboard'); else setAuthModalOpen(true); }}
-              className="block w-full rounded-lg px-4 py-2 text-left text-gray-700 transition-colors hover:bg-gray-100"
-            >
-              {isAuthenticated ? 'Dashboard' : 'Login'}
-            </button>
             <a
               href="/#contact"
               className="block px-4 py-2.5 bg-orange-500 text-white rounded-lg font-medium text-center hover:bg-orange-600 transition-colors"
@@ -113,6 +106,13 @@ const Header = () => {
             >
               Get Started
             </a>
+            <button
+              type="button"
+              onClick={() => { setIsMobileMenuOpen(false); if (isAuthenticated) window.location.assign('/dashboard'); else setAuthModalOpen(true); }}
+              className="block w-full rounded-lg border-2 border-orange-500 px-4 py-2 text-center font-medium text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
+            >
+              {isAuthenticated ? 'Dashboard' : 'Login'}
+            </button>
           </div>
         </div>
       )}

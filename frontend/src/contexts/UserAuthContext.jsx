@@ -41,13 +41,15 @@ export const UserAuthProvider = ({ children }) => {
     else setLoading(false);
   }, [token, verifyToken]);
 
-  const authenticate = async (path, payload) => {
+  const authenticate = async (path, payload, establishSession = true) => {
     try {
       const response = await axios.post(`${API}/${path}`, payload);
       const { token: newToken, user: userData } = response.data;
-      setToken(newToken);
-      setUser(userData);
-      localStorage.setItem('user_token', newToken);
+      if (establishSession) {
+        setToken(newToken);
+        setUser(userData);
+        localStorage.setItem('user_token', newToken);
+      }
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Unable to authenticate' };
@@ -59,7 +61,7 @@ export const UserAuthProvider = ({ children }) => {
     token,
     loading,
     login: (email, password) => authenticate('login', { email, password }),
-    register: (fullName, email, password) => authenticate('register', { full_name: fullName, email, password }),
+    register: (fullName, email, password) => authenticate('register', { full_name: fullName, email, password }, false),
     logout,
     isAuthenticated: !!user,
   };

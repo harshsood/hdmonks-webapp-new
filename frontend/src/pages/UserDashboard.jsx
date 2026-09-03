@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BriefcaseBusiness, CalendarDays, ClipboardList, LogOut } from 'lucide-react';
+import { BriefcaseBusiness, CalendarDays, ClipboardList, LogOut, Menu, X } from 'lucide-react';
 import axios from 'axios';
 import { useUserAuth } from '../contexts/UserAuthContext';
 
 const UserDashboard = () => {
   const { user, token, logout } = useUserAuth();
   const [dashboard, setDashboard] = useState(null);
+  const [services, setServices] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/user/dashboard`, {
+    const dashboardRequest = axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/user/dashboard`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then((response) => setDashboard(response.data.data));
+    const servicesRequest = axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/stages`)
+      .then((response) => setServices((response.data.data || []).flatMap((stage) => stage.services || [])));
+    Promise.all([dashboardRequest, servicesRequest]).catch(() => undefined);
   }, [token]);
 
   const handleLogout = () => {
@@ -28,15 +33,21 @@ const UserDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-xl font-bold tracking-tight text-gray-900">HD <span className="text-orange-500">MONKS</span></Link>
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-gray-200 bg-white">
+        <div className="flex h-20 items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3"><button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded-lg p-2 text-gray-600 hover:bg-gray-100" aria-label="Toggle services menu">{sidebarOpen ? <X /> : <Menu />}</button><Link to="/" className="text-xl font-bold tracking-tight text-gray-900">HD <span className="text-orange-500">MONKS</span></Link></div>
           <button onClick={handleLogout} className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <LogOut className="h-4 w-4" /> Log out
           </button>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <aside className={`fixed bottom-0 left-0 top-20 z-20 w-72 overflow-y-auto border-r border-gray-200 bg-white p-5 transition-transform md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Your services</p>
+        <nav className="mt-4 space-y-1">{services.map((service) => <Link key={service.service_id} to={`/dashboard/services/${service.service_id}`} onClick={() => setSidebarOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-600">{service.name}</Link>)}</nav>
+        {services.length === 0 && <p className="mt-4 text-sm text-gray-500">No services are available yet.</p>}
+      </aside>
+      <main className="ml-0 min-h-screen pt-20 md:ml-72">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wider text-orange-500">Client workspace</p>
           <h1 className="mt-2 text-3xl font-bold text-gray-900">Good to see you, {user?.full_name?.split(' ')[0]}.</h1>
@@ -58,6 +69,7 @@ const UserDashboard = () => {
             <div><dt className="text-sm text-gray-500">Email</dt><dd className="mt-1 font-medium text-gray-900">{user?.email}</dd></div>
           </dl>
         </section>
+        </div>
       </main>
     </div>
   );

@@ -33,6 +33,7 @@ import PartnerProfile from "./pages/partner/PartnerProfile";
 import { UserAuthProvider } from "./contexts/UserAuthContext";
 import ProtectedUserRoute from "./components/ProtectedUserRoute";
 import UserDashboard from "./pages/UserDashboard";
+import UserServicePage from "./pages/UserServicePage";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/service/:serviceId" element={<ServiceDetail />} />
             <Route path="/dashboard" element={<ProtectedUserRoute><UserDashboard /></ProtectedUserRoute>} />
+            <Route path="/dashboard/services/:serviceId" element={<ProtectedUserRoute><UserServicePage /></ProtectedUserRoute>} />
             
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

@@ -8,6 +8,7 @@ const UserAuthModal = ({ open, onOpenChange }) => {
   const [form, setForm] = useState({ fullName: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { login, register } = useUserAuth();
   const navigate = useNavigate();
 
@@ -25,6 +26,11 @@ const UserAuthModal = ({ open, onOpenChange }) => {
       setError(result.error);
       return;
     }
+    if (mode === 'register') {
+      setForm({ fullName: '', email: '', password: '' });
+      setRegistrationSuccess(true);
+      return;
+    }
     onOpenChange(false);
     navigate('/dashboard');
   };
@@ -32,11 +38,21 @@ const UserAuthModal = ({ open, onOpenChange }) => {
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setError('');
+    setRegistrationSuccess(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-white p-8">
+        {registrationSuccess ? (
+          <div className="py-6 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl text-green-600">&#10003;</div>
+            <DialogTitle className="mt-4 text-2xl text-gray-900">Registration successful</DialogTitle>
+            <DialogDescription className="mt-2">Your account has been created. You can now log in to access your dashboard.</DialogDescription>
+            <button type="button" onClick={() => { setRegistrationSuccess(false); setMode('login'); }} className="mt-6 w-full rounded-lg bg-orange-500 py-3 font-semibold text-white hover:bg-orange-600">Continue to login</button>
+          </div>
+        ) : (
+          <>
         <DialogHeader>
           <DialogTitle className="text-2xl text-gray-900">{mode === 'login' ? 'Welcome back' : 'Create your account'}</DialogTitle>
           <DialogDescription>
@@ -77,6 +93,8 @@ const UserAuthModal = ({ open, onOpenChange }) => {
             {submitting ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create account'}
           </button>
         </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
