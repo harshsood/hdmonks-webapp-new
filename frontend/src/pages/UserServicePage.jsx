@@ -28,7 +28,18 @@ const UserServicePage = () => {
           <p className="text-sm font-semibold uppercase tracking-wider text-orange-500">Service workspace</p>
           <h1 className="mt-2 text-3xl font-bold text-gray-900">{service.name}</h1>
           <p className="mt-5 text-lg leading-8 text-gray-600">{service.description}</p>
-          {service.details && <div className="mt-8 border-t border-gray-100 pt-6 text-gray-700">{service.details}</div>}
+          <section className="mt-8 border-t border-gray-100 pt-6">
+            <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+            {service.details && (
+              <div
+                className="prose mt-4 max-w-none"
+                dangerouslySetInnerHTML={{ __html: service.details }}
+              />
+            )}
+            <p className="mt-4 leading-relaxed text-gray-700">
+              Our expert team brings years of experience in {service.name.toLowerCase()}, ensuring that your business stays compliant, efficient, and ready for growth. We handle the complexity so you can focus on what matters most - building your business.
+            </p>
+          </section>
           {service.features?.length > 0 && <ul className="mt-8 grid gap-3 sm:grid-cols-2">{service.features.map((feature) => <li key={feature} className="rounded-lg bg-orange-50 px-4 py-3 text-sm text-gray-700">{feature}</li>)}</ul>}
         </div>
       </main>
