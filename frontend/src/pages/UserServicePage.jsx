@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Check, FileText, Rocket, Building2, Shield, Palette, Globe, Users, BriefcaseBusiness } from 'lucide-react';
+import { ArrowLeft, Check, Eye, FileText, Rocket, Building2, Shield, Palette, Globe, Users, BriefcaseBusiness, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
 const iconMap = { Rocket, Building2, Shield, Palette, Globe, Users, FileText, BriefcaseBusiness };
 const companyTypes = ['Private Limited Company', 'LLP', 'Partnership Firm', 'OPC'];
+const documentsByCompanyType = {
+  'Private Limited Company': ['Certificate of Incorporation (COA)', 'Articles of Association (AOA)', 'Memorandum of Association (MOA)', 'PAN', 'GST'],
+  LLP: ['Certificate of Incorporation (COA)', 'Memorandum of Association (MOA)', 'PAN', 'GST'],
+  'Partnership Firm': ['Partnership Deed', 'PAN', 'GST'],
+  OPC: ['Certificate of Incorporation (COA)', 'Memorandum of Association (MOA)', 'Articles of Association (AOA)', 'PAN', 'GST']
+};
 
 const UserServicePage = () => {
   const { serviceId } = useParams();
@@ -13,6 +19,7 @@ const UserServicePage = () => {
   const [stage, setStage] = useState(null);
   const [selectedCompanyType, setSelectedCompanyType] = useState('');
   const [setupModalOpen, setSetupModalOpen] = useState(false);
+  const [documentStatus, setDocumentStatus] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,6 +49,43 @@ const UserServicePage = () => {
   const handleCompanyTypeChange = (companyType) => {
     setSelectedCompanyType(companyType);
     setSetupModalOpen(true);
+  };
+
+  const handleDocumentCreatedChange = (documentName, created) => {
+    setDocumentStatus((currentStatus) => ({
+      ...currentStatus,
+      [selectedCompanyType]: {
+        ...(currentStatus[selectedCompanyType] || {}),
+        [documentName]: {
+          ...(currentStatus[selectedCompanyType]?.[documentName] || {}),
+          created
+        }
+      }
+    }));
+  };
+
+  const handleDocumentUpload = (documentName, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setDocumentStatus((currentStatus) => ({
+      ...currentStatus,
+      [selectedCompanyType]: {
+        ...(currentStatus[selectedCompanyType] || {}),
+        [documentName]: {
+          ...(currentStatus[selectedCompanyType]?.[documentName] || {}),
+          file,
+          created: true
+        }
+      }
+    }));
+    event.target.value = '';
+  };
+
+  const handleDocumentView = (file) => {
+    const fileUrl = URL.createObjectURL(file);
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => URL.revokeObjectURL(fileUrl), 60000);
   };
 
   const isCompanyFormation = serviceId === 'company-formation';
@@ -113,13 +157,57 @@ const UserServicePage = () => {
 
       {isCompanyFormation && (
         <Dialog open={setupModalOpen} onOpenChange={setSetupModalOpen}>
-          <DialogContent className="max-w-md bg-white p-8">
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-white p-6 sm:p-8">
             <DialogHeader>
               <DialogTitle className="text-2xl text-gray-900">Setup your {selectedCompanyType}</DialogTitle>
               <DialogDescription className="pt-2">Tell us a little more about your {selectedCompanyType} setup and our team will guide you through the next steps.</DialogDescription>
             </DialogHeader>
-            <div className="mt-4 rounded-lg bg-orange-50 p-4 text-sm text-gray-700">
-              You selected <strong>{selectedCompanyType}</strong>. The setup form for this company type will be available here next.
+            <div className="mt-5 rounded-lg bg-orange-50 p-4 text-sm text-gray-700">
+              <strong>{selectedCompanyType}</strong> documents checklist
+            </div>
+            <div className="mt-4 space-y-3">
+              {documentsByCompanyType[selectedCompanyType]?.map((documentName) => {
+                const document = documentStatus[selectedCompanyType]?.[documentName] || {};
+
+                return (
+                  <div key={documentName} className="rounded-lg border border-gray-200 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <label className="flex min-w-0 cursor-pointer items-center gap-3 text-sm font-medium text-gray-800">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(document.created)}
+                          onChange={(event) => handleDocumentCreatedChange(documentName, event.target.checked)}
+                          className="h-4 w-4 shrink-0 accent-orange-500"
+                        />
+                        <span>{documentName}</span>
+                      </label>
+                      <div className="flex shrink-0 items-center gap-2 pl-7 sm:pl-0">
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50">
+                          <Upload className="h-3.5 w-3.5" />
+                          {document.file ? 'Replace file' : 'Upload file'}
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            onChange={(event) => handleDocumentUpload(documentName, event)}
+                            className="sr-only"
+                          />
+                        </label>
+                        {document.file && (
+                          <button
+                            type="button"
+                            onClick={() => handleDocumentView(document.file)}
+                            className="inline-flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {document.file && <p className="mt-2 truncate pl-7 text-xs text-gray-500">Uploaded: {document.file.name}</p>}
+                  </div>
+                );
+              })}
             </div>
           </DialogContent>
         </Dialog>
