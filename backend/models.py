@@ -191,6 +191,16 @@ class UserLogin(BaseModel):
     password: str
 
 
+class CompanyDocumentUpdate(BaseModel):
+    company_type: str
+    document_name: str
+    created: bool = False
+    file_name: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+    file_data: Optional[str] = None
+
+
 # Blog/Article Models
 class Blog(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

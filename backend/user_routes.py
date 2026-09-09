@@ -4,7 +4,7 @@ from typing import Optional
 import uuid
 
 from database import database
-from models import UserLogin, UserRegister
+from models import CompanyDocumentUpdate, UserLogin, UserRegister
 from user_auth import create_session, hash_password, verify_password, verify_session
 
 user_router = APIRouter(prefix="/api/user", tags=["User"])
@@ -77,3 +77,25 @@ async def get_user_dashboard(session: dict = Depends(verify_user_token)):
             "upcoming_consultations": 0,
         },
     }
+
+
+@user_router.get("/company-documents/{service_id}")
+async def get_company_documents(service_id: str, session: dict = Depends(verify_user_token)):
+    documents = await database.get_user_company_documents(session["user_id"], service_id)
+    return {"success": True, "data": documents}
+
+
+@user_router.put("/company-documents/{service_id}")
+async def update_company_document(
+    service_id: str,
+    document: CompanyDocumentUpdate,
+    session: dict = Depends(verify_user_token),
+):
+    document_data = document.model_dump()
+    document_data.update({
+        "id": str(uuid.uuid4()),
+        "user_id": session["user_id"],
+        "service_id": service_id,
+    })
+    saved_document = await database.upsert_user_company_document(document_data)
+    return {"success": True, "data": saved_document}

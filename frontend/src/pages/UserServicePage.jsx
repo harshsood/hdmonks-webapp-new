@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Check, Eye, FileText, Rocket, Building2, Shield, Palette, Globe, Users, BriefcaseBusiness, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { useUserAuth } from '../contexts/UserAuthContext';
 
 const iconMap = { Rocket, Building2, Shield, Palette, Globe, Users, FileText, BriefcaseBusiness };
 const companyTypes = ['Private Limited Company', 'LLP', 'Partnership Firm', 'OPC'];
@@ -15,12 +16,38 @@ const documentsByCompanyType = {
 
 const UserServicePage = () => {
   const { serviceId } = useParams();
+  const { token } = useUserAuth();
   const [service, setService] = useState(null);
   const [stage, setStage] = useState(null);
   const [selectedCompanyType, setSelectedCompanyType] = useState('');
   const [setupModalOpen, setSetupModalOpen] = useState(false);
   const [documentStatus, setDocumentStatus] = useState({});
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token || serviceId !== 'company-formation') return;
+
+    axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/user/company-documents/${serviceId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then((response) => {
+      const savedDocuments = (response.data.data || []).reduce((documents, document) => ({
+        ...documents,
+        [document.company_type]: {
+          ...(documents[document.company_type] || {}),
+          [document.document_name]: {
+            created: document.created,
+            file: document.file_data ? {
+              name: document.file_name,
+              type: document.file_type,
+              size: document.file_size,
+              dataUrl: document.file_data
+            } : undefined
+          }
+        }
+      }), {});
+      setDocumentStatus(savedDocuments);
+    }).catch((error) => console.error('Unable to load saved company documents.', error));
+  }, [serviceId, token]);
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/stages`)
@@ -52,40 +79,65 @@ const UserServicePage = () => {
   };
 
   const handleDocumentCreatedChange = (documentName, created) => {
+    const nextDocument = {
+      ...(documentStatus[selectedCompanyType]?.[documentName] || {}),
+      created
+    };
     setDocumentStatus((currentStatus) => ({
       ...currentStatus,
       [selectedCompanyType]: {
         ...(currentStatus[selectedCompanyType] || {}),
-        [documentName]: {
-          ...(currentStatus[selectedCompanyType]?.[documentName] || {}),
-          created
-        }
+        [documentName]: nextDocument
       }
     }));
+    saveDocument(selectedCompanyType, documentName, nextDocument);
   };
 
   const handleDocumentUpload = (documentName, event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setDocumentStatus((currentStatus) => ({
-      ...currentStatus,
-      [selectedCompanyType]: {
-        ...(currentStatus[selectedCompanyType] || {}),
-        [documentName]: {
-          ...(currentStatus[selectedCompanyType]?.[documentName] || {}),
-          file,
-          created: true
+    const fileReader = new FileReader();
+    fileReader.onload = () => {
+      const nextDocument = {
+        ...(documentStatus[selectedCompanyType]?.[documentName] || {}),
+        file: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          dataUrl: fileReader.result
+        },
+        created: true
+      };
+      setDocumentStatus((currentStatus) => ({
+        ...currentStatus,
+        [selectedCompanyType]: {
+          ...(currentStatus[selectedCompanyType] || {}),
+          [documentName]: nextDocument
         }
-      }
-    }));
+      }));
+      saveDocument(selectedCompanyType, documentName, nextDocument);
+    };
+    fileReader.readAsDataURL(file);
     event.target.value = '';
   };
 
+  const saveDocument = (companyType, documentName, document) => {
+    axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/user/company-documents/${serviceId}`, {
+      company_type: companyType,
+      document_name: documentName,
+      created: Boolean(document.created),
+      file_name: document.file?.name || null,
+      file_type: document.file?.type || null,
+      file_size: document.file?.size || null,
+      file_data: document.file?.dataUrl || null
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).catch((error) => console.error('Unable to save company document.', error));
+  };
+
   const handleDocumentView = (file) => {
-    const fileUrl = URL.createObjectURL(file);
-    window.open(fileUrl, '_blank', 'noopener,noreferrer');
-    window.setTimeout(() => URL.revokeObjectURL(fileUrl), 60000);
+    window.open(file.dataUrl, '_blank', 'noopener,noreferrer');
   };
 
   const isCompanyFormation = serviceId === 'company-formation';

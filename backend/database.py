@@ -339,6 +339,32 @@ class Database:
         await self.db.users.insert_one(user_data)
         return {key: value for key, value in user_data.items() if key != "password_hash"}
 
+    # ===== USER COMPANY DOCUMENTS =====
+    async def get_user_company_documents(self, user_id: str, service_id: str) -> List[Dict[str, Any]]:
+        """Get all saved company documents for a user and service."""
+        if self.db is None:
+            await self.connect()
+
+        return await self.db.company_documents.find(
+            {"user_id": user_id, "service_id": service_id},
+            {"_id": 0, "user_id": 0, "service_id": 0}
+        ).to_list(length=None)
+
+    async def upsert_user_company_document(self, document_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update one saved company document for a user."""
+        if self.db is None:
+            await self.connect()
+
+        document_data = self._serialize_datetime(document_data)
+        query = {
+            "user_id": document_data["user_id"],
+            "service_id": document_data["service_id"],
+            "company_type": document_data["company_type"],
+            "document_name": document_data["document_name"],
+        }
+        await self.db.company_documents.update_one(query, {"$set": document_data}, upsert=True)
+        return await self.db.company_documents.find_one(query, {"_id": 0, "user_id": 0, "service_id": 0})
+
     # ===== BLOGS =====
     async def get_all_blogs(self, published_only: bool = False, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """Get all blogs"""
