@@ -137,7 +137,20 @@ const UserServicePage = () => {
   };
 
   const handleDocumentView = (file) => {
-    window.open(file.dataUrl, '_blank', 'noopener,noreferrer');
+    const viewerWindow = window.open('', '_blank');
+    if (!viewerWindow) return;
+
+    fetch(file.dataUrl)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const fileUrl = URL.createObjectURL(blob);
+        viewerWindow.location.href = fileUrl;
+        window.setTimeout(() => URL.revokeObjectURL(fileUrl), 60000);
+      })
+      .catch((error) => {
+        viewerWindow.close();
+        console.error('Unable to open uploaded document.', error);
+      });
   };
 
   const isCompanyFormation = serviceId === 'company-formation';
