@@ -132,7 +132,7 @@ async def login_hrms(credentials: HRMSLogin):
         raise HTTPException(status_code=401, detail="Invalid email/username or password")
     authorization = await database.get_user_hrms_authorization(user["id"])
     if not has_permission(authorization, "hrms.access"):
-        raise HTTPException(status_code=403, detail="You are not authorized to access HRMS")
+        raise HTTPException(status_code=403, detail="Credentials accepted, but this account has no HRMS role assigned")
 
     session = create_session(
         user["id"],
