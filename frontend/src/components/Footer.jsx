@@ -57,6 +57,11 @@ const Footer = () => {
                   Contact
                 </a>
               </li>
+              <li>
+                <Link to="/hrms/login" className="text-sm hover:text-orange-500 transition-colors">
+                  HRMS
+                </Link>
+              </li>
             </ul>
           </div>
 

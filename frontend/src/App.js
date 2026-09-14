@@ -34,12 +34,21 @@ import { UserAuthProvider } from "./contexts/UserAuthContext";
 import ProtectedUserRoute from "./components/ProtectedUserRoute";
 import UserDashboard from "./pages/UserDashboard";
 import UserServicePage from "./pages/UserServicePage";
+import { HRMSAuthProvider } from "./contexts/HRMSAuthContext";
+import ProtectedHRMSRoute from "./components/ProtectedHRMSRoute";
+import HRMSLogin from "./pages/hrms/HRMSLogin";
+import HRMSDashboard from "./pages/hrms/HRMSDashboard";
+import HRMSRoleManagement from "./pages/hrms/HRMSRoleManagement";
+import EmployeeList from "./pages/hrms/EmployeeList";
+import EmployeeForm from "./pages/hrms/EmployeeForm";
+import EmployeeProfile from "./pages/hrms/EmployeeProfile";
 
 function App() {
   return (
     <SettingsProvider>
       <PartnerAuthProvider>
       <UserAuthProvider>
+      <HRMSAuthProvider>
       <AdminAuthProvider>
         <div className="App">
           <BrowserRouter>
@@ -49,6 +58,16 @@ function App() {
             <Route path="/service/:serviceId" element={<ServiceDetail />} />
             <Route path="/dashboard" element={<ProtectedUserRoute><UserDashboard /></ProtectedUserRoute>} />
             <Route path="/dashboard/services/:serviceId" element={<ProtectedUserRoute><UserServicePage /></ProtectedUserRoute>} />
+
+            {/* HRMS Routes */}
+            <Route path="/hrms/login" element={<HRMSLogin />} />
+            <Route path="/hrms" element={<ProtectedHRMSRoute><HRMSDashboard /></ProtectedHRMSRoute>} />
+            <Route path="/hrms/dashboard" element={<ProtectedHRMSRoute><HRMSDashboard /></ProtectedHRMSRoute>} />
+            <Route path="/hrms/roles" element={<ProtectedHRMSRoute requiredPermission="settings.manage"><HRMSRoleManagement /></ProtectedHRMSRoute>} />
+            <Route path="/hrms/employees" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeList /></ProtectedHRMSRoute>} />
+            <Route path="/hrms/employees/new" element={<ProtectedHRMSRoute requiredPermission="employees.create"><EmployeeForm /></ProtectedHRMSRoute>} />
+            <Route path="/hrms/employees/:id" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeProfile /></ProtectedHRMSRoute>} />
+            <Route path="/hrms/employees/:id/edit" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeForm /></ProtectedHRMSRoute>} />
             
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -96,6 +115,7 @@ function App() {
         </BrowserRouter>
         </div>
       </AdminAuthProvider>
+      </HRMSAuthProvider>
       </UserAuthProvider>
       </PartnerAuthProvider>
     </SettingsProvider>

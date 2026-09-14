@@ -157,6 +157,40 @@ async def get_dashboard_stats(session: dict = Depends(verify_admin_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@admin_router.put("/users/{user_id}/hrms-access")
+async def update_hrms_access(
+    user_id: str,
+    enabled: bool = Query(...),
+    session: dict = Depends(verify_admin_token),
+):
+    """Grant or revoke the explicit HRMS access permission for a user."""
+    user = await database.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    permissions = [permission for permission in user.get("permissions", []) if permission != "hrms.access"]
+    if enabled:
+        permissions.append("hrms.access")
+    await database.update_user_permissions(user_id, permissions)
+    return {"success": True, "user_id": user_id, "hrms_access": enabled}
+
+
+@admin_router.put("/users/{user_id}/hrms-role")
+async def assign_initial_hrms_role(
+    user_id: str,
+    role_key: str = Query(...),
+    session: dict = Depends(verify_admin_token),
+):
+    """Bootstrap or update an HRMS role using the existing admin portal."""
+    user = await database.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not await database.assign_hrms_roles(user_id, [role_key]):
+        raise HTTPException(status_code=400, detail="Invalid HRMS role")
+    authorization = await database.get_user_hrms_authorization(user_id)
+    return {"success": True, "user_id": user_id, "data": authorization}
+
+
 # ===== BLOGS =====
 
 @admin_router.get("/blogs")

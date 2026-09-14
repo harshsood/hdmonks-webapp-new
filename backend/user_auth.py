@@ -15,13 +15,19 @@ def verify_password(password: str, hashed: str) -> bool:
     return hash_password(password) == hashed
 
 
-def create_session(user_id: str, email: str) -> dict:
+def create_session(
+    user_id: str,
+    email: str,
+    permissions: Optional[list[str]] = None,
+    remember_me: bool = False,
+) -> dict:
     token = secrets.token_urlsafe(32)
     session_data = {
         "user_id": user_id,
         "email": email,
+        "permissions": permissions or [],
         "created_at": datetime.utcnow(),
-        "expires_at": datetime.utcnow() + timedelta(hours=24),
+        "expires_at": datetime.utcnow() + timedelta(days=30 if remember_me else 1),
     }
     active_user_sessions[token] = session_data
     return {"token": token, **session_data}

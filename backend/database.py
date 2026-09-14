@@ -331,6 +331,205 @@ class Database:
             await self.connect()
         return await self.db.users.find_one({"email": email.lower()}, {"_id": 0})
 
+    async def get_user_by_identifier(self, identifier: str) -> Optional[Dict[str, Any]]:
+        """Get a user by email or an optional legacy username field."""
+        if self.db is None:
+            await self.connect()
+        normalized_identifier = identifier.strip().lower()
+        return await self.db.users.find_one(
+            {"$or": [{"email": normalized_identifier}, {"username": normalized_identifier}]},
+            {"_id": 0},
+        )
+
+    async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get a user by stable application user ID."""
+        if self.db is None:
+            await self.connect()
+        return await self.db.users.find_one({"id": user_id}, {"_id": 0})
+
+    async def update_user_permissions(self, user_id: str, permissions: List[str]) -> bool:
+        """Replace the explicit permissions assigned to an application user."""
+        if self.db is None:
+            await self.connect()
+        result = await self.db.users.update_one(
+            {"id": user_id},
+            {"$set": {"permissions": sorted(set(permissions))}},
+        )
+        return result.matched_count > 0
+
+    async def ensure_hrms_rbac_catalog(self) -> None:
+        """Create or refresh the built-in HRMS roles and permissions idempotently."""
+        from hrms_rbac import PERMISSION_DESCRIPTIONS, ROLE_DEFINITIONS
+
+        if self.db is None:
+            await self.connect()
+
+        for key, description in PERMISSION_DESCRIPTIONS.items():
+            module, action = key.split(".", 1)
+            await self.db.hrms_permissions.update_one(
+                {"key": key},
+                {"$set": {"key": key, "module": module, "action": action, "description": description}},
+                upsert=True,
+            )
+
+        for key, definition in ROLE_DEFINITIONS.items():
+            await self.db.hrms_roles.update_one(
+                {"key": key},
+                {"$set": {"key": key, **definition}},
+                upsert=True,
+            )
+            await self.db.hrms_role_permissions.update_one(
+                {"role_key": key},
+                {"$set": {"role_key": key, "permission_keys": definition["permissions"]}},
+                upsert=True,
+            )
+            await self.db.hrms_employees.create_index("employee_code", unique=True)
+            await self.db.hrms_employees.create_index("user_id", unique=True, sparse=True)
+            await self.db.hrms_employees.create_index([("employment_status", 1), ("department", 1), ("location", 1)])
+            await self.db.hrms_employee_documents.create_index([("employee_id", 1), ("created_at", -1)])
+            await self.db.hrms_employee_activity.create_index([("employee_id", 1), ("created_at", -1)])
+            await self.db.hrms_audit_logs.create_index([("entity_type", 1), ("entity_id", 1), ("created_at", -1)])
+
+    async def get_user_hrms_authorization(self, user_id: str) -> Dict[str, Any]:
+        """Resolve direct compatibility permissions plus mapped HRMS role permissions."""
+        if self.db is None:
+            await self.connect()
+        await self.ensure_hrms_rbac_catalog()
+
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return {"roles": [], "permissions": []}
+
+        mapping = await self.db.hrms_user_roles.find_one({"user_id": user_id}, {"_id": 0})
+        role_keys = mapping.get("role_keys", []) if mapping else []
+        roles = await self.db.hrms_roles.find({"key": {"$in": role_keys}}, {"_id": 0}).to_list(length=None)
+        role_permissions = await self.db.hrms_role_permissions.find(
+            {"role_key": {"$in": role_keys}}, {"_id": 0}
+        ).to_list(length=None)
+
+        permissions = set(permission for permission in user.get("permissions", []) if permission.startswith(("hrms.", "employees.", "departments.", "attendance.", "leave.", "payroll.", "salary.", "payslip.", "expenses.", "performance.", "recruitment.", "onboarding.", "training.", "assets.", "documents.", "helpdesk.", "reports.", "analytics.", "settings.", "audit_logs.")))
+        for role in role_permissions:
+            permissions.update(role.get("permission_keys", []))
+
+        return {"roles": sorted(role_keys), "permissions": sorted(permissions)}
+
+    async def list_hrms_users(self, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List non-sensitive user fields for the HRMS access-management screen."""
+        if self.db is None:
+            await self.connect()
+        query = {}
+        if search:
+            query = {"$or": [
+                {"full_name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+            ]}
+        return await self.db.users.find(
+            query,
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "created_at": 1},
+        ).sort("full_name", 1).to_list(length=500)
+
+    async def get_hrms_roles(self) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        await self.ensure_hrms_rbac_catalog()
+        roles = await self.db.hrms_roles.find({}, {"_id": 0}).sort("name", 1).to_list(length=None)
+        mappings = await self.db.hrms_role_permissions.find({}, {"_id": 0}).to_list(length=None)
+        permissions_by_role = {mapping["role_key"]: mapping.get("permission_keys", []) for mapping in mappings}
+        for role in roles:
+            role["permissions"] = permissions_by_role.get(role["key"], [])
+        return roles
+
+    async def assign_hrms_roles(self, user_id: str, role_keys: List[str]) -> bool:
+        if self.db is None:
+            await self.connect()
+        await self.ensure_hrms_rbac_catalog()
+        valid_roles = await self.db.hrms_roles.count_documents({"key": {"$in": role_keys}})
+        if valid_roles != len(set(role_keys)):
+            return False
+        result = await self.db.hrms_user_roles.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id, "role_keys": sorted(set(role_keys))}},
+            upsert=True,
+        )
+        return result.matched_count > 0 or result.upserted_id is not None
+
+    # ===== HRMS EMPLOYEES =====
+    async def create_hrms_employee(self, employee_data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        employee_data = self._serialize_datetime(employee_data)
+        await self.db.hrms_employees.insert_one(employee_data)
+        return await self.db.hrms_employees.find_one({"id": employee_data["id"]}, {"_id": 0})
+
+    async def get_hrms_employee(self, employee_id: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_employees.find_one({"id": employee_id}, {"_id": 0})
+
+    async def list_hrms_employees(self, query: Dict[str, Any], sort_by: str, sort_order: int, skip: int, limit: int) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        allowed_sort_fields = {"employee_code", "first_name", "last_name", "date_of_joining", "department", "designation", "location", "employment_status", "created_at"}
+        sort_field = sort_by if sort_by in allowed_sort_fields else "created_at"
+        cursor = self.db.hrms_employees.find(query, {"_id": 0}).sort(sort_field, sort_order).skip(skip).limit(limit)
+        return await cursor.to_list(length=limit)
+
+    async def count_hrms_employees(self, query: Dict[str, Any]) -> int:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_employees.count_documents(query)
+
+    async def get_hrms_employee_filter_options(self, query: Dict[str, Any]) -> Dict[str, List[str]]:
+        if self.db is None:
+            await self.connect()
+        return {
+            "departments": sorted(value for value in await self.db.hrms_employees.distinct("department", query) if value),
+            "designations": sorted(value for value in await self.db.hrms_employees.distinct("designation", query) if value),
+            "locations": sorted(value for value in await self.db.hrms_employees.distinct("location", query) if value),
+        }
+
+    async def update_hrms_employee(self, employee_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        update_data = self._serialize_datetime(update_data)
+        await self.db.hrms_employees.update_one({"id": employee_id}, {"$set": update_data})
+        return await self.get_hrms_employee(employee_id)
+
+    async def create_hrms_document(self, document_data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        document_data = self._serialize_datetime(document_data)
+        await self.db.hrms_employee_documents.insert_one(document_data)
+        return {key: value for key, value in document_data.items() if key != "file_data"}
+
+    async def list_hrms_documents(self, employee_id: str) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_employee_documents.find(
+            {"employee_id": employee_id}, {"_id": 0, "file_data": 0}
+        ).sort("created_at", -1).to_list(length=200)
+
+    async def create_hrms_activity(self, activity_data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        activity_data = self._serialize_datetime(activity_data)
+        await self.db.hrms_employee_activity.insert_one(activity_data)
+        return activity_data
+
+    async def list_hrms_activity(self, employee_id: str) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_employee_activity.find(
+            {"employee_id": employee_id}, {"_id": 0}
+        ).sort("created_at", -1).to_list(length=500)
+
+    async def create_hrms_audit_log(self, audit_data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        audit_data = self._serialize_datetime(audit_data)
+        await self.db.hrms_audit_logs.insert_one(audit_data)
+        return audit_data
+
     async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a user account"""
         if self.db is None:

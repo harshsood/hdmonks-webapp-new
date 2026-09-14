@@ -21,6 +21,8 @@ from email_service import email_service
 from admin_routes import admin_router
 from partner_routes import partner_router
 from user_routes import user_router
+from hrms_routes import hrms_router
+from hrms_employee_routes import employee_router
 
 def serialize_mongo(document):
     if isinstance(document, list):
@@ -670,6 +672,8 @@ app.include_router(api_router)
 app.include_router(admin_router)
 app.include_router(partner_router)
 app.include_router(user_router)
+app.include_router(hrms_router)
+app.include_router(employee_router)
 
 
 @app.on_event("startup")

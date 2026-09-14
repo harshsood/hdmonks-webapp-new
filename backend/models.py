@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
+from typing import Dict, List, Literal, Optional
 from datetime import datetime
 import uuid
 
@@ -177,6 +177,7 @@ class User(BaseModel):
     full_name: str
     email: EmailStr
     password_hash: str
+    permissions: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -189,6 +190,92 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class HRMSLogin(BaseModel):
+    identifier: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    remember_me: bool = False
+
+
+class EmployeeBase(BaseModel):
+    employee_code: str = Field(min_length=1, max_length=50)
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    profile_photo_url: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    personal_email: Optional[EmailStr] = None
+    work_email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, max_length=30)
+    address: Optional[Dict[str, str]] = None
+    emergency_contact: Optional[Dict[str, str]] = None
+    date_of_joining: str
+    employment_type: Literal["full_time", "part_time", "contract", "intern", "consultant"]
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    manager_user_id: Optional[str] = None
+    branch: Optional[str] = None
+    location: Optional[str] = None
+    probation_period_days: Optional[int] = Field(default=None, ge=0, le=365)
+    confirmation_date: Optional[str] = None
+    notice_period_days: Optional[int] = Field(default=None, ge=0, le=365)
+    employment_status: Literal["active", "inactive", "archived"] = "active"
+
+
+class EmployeeCreate(EmployeeBase):
+    user_id: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+    payment_method: Optional[Literal["bank_transfer", "cash", "cheque"]] = None
+    tax_information: Optional[Dict[str, str]] = None
+
+
+class EmployeeUpdate(BaseModel):
+    employee_code: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    first_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    last_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    profile_photo_url: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    personal_email: Optional[EmailStr] = None
+    work_email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, max_length=30)
+    address: Optional[Dict[str, str]] = None
+    emergency_contact: Optional[Dict[str, str]] = None
+    date_of_joining: Optional[str] = None
+    employment_type: Optional[Literal["full_time", "part_time", "contract", "intern", "consultant"]] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    manager_user_id: Optional[str] = None
+    branch: Optional[str] = None
+    location: Optional[str] = None
+    probation_period_days: Optional[int] = Field(default=None, ge=0, le=365)
+    confirmation_date: Optional[str] = None
+    notice_period_days: Optional[int] = Field(default=None, ge=0, le=365)
+    employment_status: Optional[Literal["active", "inactive", "archived"]] = None
+    user_id: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+    payment_method: Optional[Literal["bank_transfer", "cash", "cheque"]] = None
+    tax_information: Optional[Dict[str, str]] = None
+
+
+class EmployeeDocumentCreate(BaseModel):
+    document_type: Literal[
+        "offer_letter", "appointment_letter", "id_document", "certificate", "contract", "salary_revision"
+    ]
+    file_name: str = Field(min_length=1, max_length=255)
+    file_type: Optional[str] = None
+    file_size: Optional[int] = Field(default=None, ge=0, le=10_000_000)
+    file_data: Optional[str] = None
+
+
+class EmployeeStatusUpdate(BaseModel):
+    status: Literal["active", "inactive", "archived"]
+    reason: Optional[str] = Field(default=None, max_length=500)
 
 
 class CompanyDocumentUpdate(BaseModel):
