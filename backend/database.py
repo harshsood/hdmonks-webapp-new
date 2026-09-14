@@ -389,6 +389,16 @@ class Database:
             await self.db.hrms_employee_documents.create_index([("employee_id", 1), ("created_at", -1)])
             await self.db.hrms_employee_activity.create_index([("employee_id", 1), ("created_at", -1)])
             await self.db.hrms_audit_logs.create_index([("entity_type", 1), ("entity_id", 1), ("created_at", -1)])
+            await self.db.hrms_attendance.create_index([("employee_id", 1), ("attendance_date", 1)], unique=True)
+            await self.db.hrms_attendance_corrections.create_index([("employee_id", 1), ("status", 1), ("created_at", -1)])
+            await self.db.hrms_attendance_policies.create_index("name", unique=True)
+            await self.db.hrms_leave_types.create_index("code", unique=True)
+            await self.db.hrms_leave_applications.create_index([("employee_id", 1), ("start_date", 1), ("end_date", 1)])
+            await self.db.hrms_leave_balances.create_index([("employee_id", 1), ("leave_type", 1)], unique=True)
+            await self.db.hrms_leave_transactions.create_index([("employee_id", 1), ("created_at", -1)])
+            await self.db.hrms_holidays.create_index("holiday_date")
+            await self.db.hrms_salary_templates.create_index("name", unique=True)
+            await self.db.hrms_salary_assignments.create_index([("employee_id", 1), ("effective_date", -1)])
 
     async def get_user_hrms_authorization(self, user_id: str) -> Dict[str, Any]:
         """Resolve direct compatibility permissions plus mapped HRMS role permissions."""
@@ -529,6 +539,204 @@ class Database:
         audit_data = self._serialize_datetime(audit_data)
         await self.db.hrms_audit_logs.insert_one(audit_data)
         return audit_data
+
+    # ===== HRMS ATTENDANCE =====
+    async def get_hrms_attendance(self, employee_id: str, attendance_date: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_attendance.find_one({"employee_id": employee_id, "attendance_date": attendance_date}, {"_id": 0})
+
+    async def upsert_hrms_attendance(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        query = {"employee_id": data["employee_id"], "attendance_date": data["attendance_date"]}
+        await self.db.hrms_attendance.update_one(query, {"$set": self._serialize_datetime(data)}, upsert=True)
+        return await self.db.hrms_attendance.find_one(query, {"_id": 0})
+
+    async def list_hrms_attendance(self, query: Dict[str, Any], skip: int = 0, limit: int = 1000) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_attendance.find(query, {"_id": 0}).sort("attendance_date", -1).skip(skip).limit(limit).to_list(length=limit)
+
+    async def create_hrms_correction(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_attendance_corrections.insert_one(self._serialize_datetime(data))
+        return await self.db.hrms_attendance_corrections.find_one({"id": data["id"]}, {"_id": 0})
+
+    async def list_hrms_corrections(self, query: Dict[str, Any]) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_attendance_corrections.find(query, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
+
+    async def update_hrms_correction(self, correction_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_attendance_corrections.update_one({"id": correction_id}, {"$set": self._serialize_datetime(data)})
+        return await self.db.hrms_attendance_corrections.find_one({"id": correction_id}, {"_id": 0})
+
+    async def list_hrms_policies(self) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_attendance_policies.find({}, {"_id": 0}).sort("name", 1).to_list(length=100)
+
+    async def upsert_hrms_policy(self, policy_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_attendance_policies.update_one({"id": policy_id}, {"$set": self._serialize_datetime(data)}, upsert=True)
+        return await self.db.hrms_attendance_policies.find_one({"id": policy_id}, {"_id": 0})
+
+    # ===== HRMS LEAVE =====
+    async def list_hrms_leave_types(self, active_only: bool = False) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        query = {"is_active": True} if active_only else {}
+        return await self.db.hrms_leave_types.find(query, {"_id": 0}).sort("name", 1).to_list(length=100)
+
+    async def upsert_hrms_leave_type(self, code: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_leave_types.update_one({"code": code}, {"$set": self._serialize_datetime(data)}, upsert=True)
+        return await self.db.hrms_leave_types.find_one({"code": code}, {"_id": 0})
+
+    async def get_hrms_leave_balance(self, employee_id: str, leave_type: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_leave_balances.find_one({"employee_id": employee_id, "leave_type": leave_type}, {"_id": 0})
+
+    async def list_hrms_leave_balances(self, employee_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        query = {"employee_id": employee_id} if employee_id else {}
+        return await self.db.hrms_leave_balances.find(query, {"_id": 0}).sort("leave_type", 1).to_list(length=500)
+
+    async def list_hrms_leave_applications(self, query: Dict[str, Any]) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_leave_applications.find(query, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
+
+    async def get_hrms_leave_application(self, application_id: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_leave_applications.find_one({"id": application_id}, {"_id": 0})
+
+    async def create_hrms_leave_transaction(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime(data))
+        return data
+
+    async def create_leave_application_transaction(self, application: Dict[str, Any], balance_query: Dict[str, Any], days: float) -> Dict[str, Any]:
+        """Atomically reserve balance and create a pending leave application."""
+        if self.db is None:
+            await self.connect()
+        session = await self.client.start_session()
+        try:
+            async with session.start_transaction():
+                balance = await self.db.hrms_leave_balances.find_one(balance_query, session=session)
+                if balance and balance.get("available", 0) < days and not balance.get("allow_overdraft", False):
+                    raise ValueError("Insufficient leave balance")
+                if not balance:
+                    raise ValueError("Leave balance is not configured")
+                await self.db.hrms_leave_balances.update_one(balance_query, {"$inc": {"reserved": days, "available": -days}}, session=session)
+                await self.db.hrms_leave_applications.insert_one(self._serialize_datetime(application), session=session)
+                await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({
+                    "id": str(uuid.uuid4()), "employee_id": application["employee_id"], "leave_type": application["leave_type"], "application_id": application["id"], "transaction_type": "reserved", "amount": days, "created_at": datetime.utcnow().isoformat()
+                }), session=session)
+            return application
+        finally:
+            await session.end_session()
+
+    async def decide_leave_transaction(self, application: Dict[str, Any], decision_data: Dict[str, Any], restore_balance: bool = False, finalize_balance: bool = False) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        session = await self.client.start_session()
+        try:
+            async with session.start_transaction():
+                await self.db.hrms_leave_applications.update_one({"id": application["id"]}, {"$set": self._serialize_datetime(decision_data)}, session=session)
+                if restore_balance:
+                    await self.db.hrms_leave_balances.update_one({"employee_id": application["employee_id"], "leave_type": application["leave_type"]}, {"$inc": {"reserved": -application["days"], "available": application["days"]}}, session=session)
+                    await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({"id": str(uuid.uuid4()), "employee_id": application["employee_id"], "leave_type": application["leave_type"], "application_id": application["id"], "transaction_type": "restored", "amount": application["days"], "created_at": datetime.utcnow().isoformat()}), session=session)
+                if finalize_balance:
+                    await self.db.hrms_leave_balances.update_one({"employee_id": application["employee_id"], "leave_type": application["leave_type"]}, {"$inc": {"reserved": -application["days"], "used": application["days"]}}, session=session)
+                    await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({"id": str(uuid.uuid4()), "employee_id": application["employee_id"], "leave_type": application["leave_type"], "application_id": application["id"], "transaction_type": "used", "amount": application["days"], "created_at": datetime.utcnow().isoformat()}), session=session)
+            return await self.get_hrms_leave_application(application["id"])
+        finally:
+            await session.end_session()
+
+    async def list_hrms_holidays(self, date_from: Optional[str] = None, date_to: Optional[str] = None) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        query = {}
+        if date_from or date_to:
+            query["holiday_date"] = {key: value for key, value in (("$gte", date_from), ("$lte", date_to)) if value}
+        return await self.db.hrms_holidays.find(query, {"_id": 0}).sort("holiday_date", 1).to_list(length=500)
+
+    # ===== HRMS SALARY =====
+    async def list_hrms_salary_templates(self, active_only: bool = False) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        query = {"is_active": True} if active_only else {}
+        return await self.db.hrms_salary_templates.find(query, {"_id": 0}).sort("name", 1).to_list(length=500)
+
+    async def create_hrms_salary_template(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_salary_templates.insert_one(self._serialize_datetime(data))
+        return await self.db.hrms_salary_templates.find_one({"id": data["id"]}, {"_id": 0})
+
+    async def get_hrms_salary_assignment(self, employee_id: str, assignment_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        query = {"employee_id": employee_id}
+        if assignment_id:
+            query["id"] = assignment_id
+        return await self.db.hrms_salary_assignments.find_one(query, {"_id": 0}, sort=[("effective_date", -1), ("created_at", -1)])
+
+    async def list_hrms_salary_history(self, employee_id: str) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db.hrms_salary_assignments.find({"employee_id": employee_id}, {"_id": 0}).sort("effective_date", -1).to_list(length=500)
+
+    async def create_hrms_salary_assignment(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db.hrms_salary_assignments.insert_one(self._serialize_datetime(data))
+        return await self.db.hrms_salary_assignments.find_one({"id": data["id"]}, {"_id": 0})
+
+    # ===== HRMS ORGANIZATION HIERARCHY =====
+    async def list_hrms_resources(self, resource: str, query: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db[f"hrms_{resource}"].find(query or {}, {"_id": 0}).sort("name", 1).to_list(length=1000)
+
+    async def get_hrms_resource(self, resource: str, resource_id: str) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        return await self.db[f"hrms_{resource}"].find_one({"id": resource_id}, {"_id": 0})
+
+    async def create_hrms_resource(self, resource: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        if self.db is None:
+            await self.connect()
+        await self.db[f"hrms_{resource}"].insert_one(self._serialize_datetime(data))
+        return await self.get_hrms_resource(resource, data["id"])
+
+    async def update_hrms_resource(self, resource: str, resource_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.db is None:
+            await self.connect()
+        await self.db[f"hrms_{resource}"].update_one({"id": resource_id}, {"$set": self._serialize_datetime(data)})
+        return await self.get_hrms_resource(resource, resource_id)
+
+    async def get_employee_manager_chain(self, employee_id: str) -> List[str]:
+        chain = []
+        current_id = employee_id
+        while current_id:
+            if current_id in chain:
+                return chain
+            chain.append(current_id)
+            employee = await self.get_hrms_employee(current_id)
+            current_id = employee.get("manager_employee_id") if employee else None
+        return chain
 
     async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a user account"""

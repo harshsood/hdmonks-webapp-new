@@ -42,6 +42,11 @@ import HRMSRoleManagement from "./pages/hrms/HRMSRoleManagement";
 import EmployeeList from "./pages/hrms/EmployeeList";
 import EmployeeForm from "./pages/hrms/EmployeeForm";
 import EmployeeProfile from "./pages/hrms/EmployeeProfile";
+import OrganizationManagement from "./pages/hrms/OrganizationManagement";
+import AttendanceManagement from "./pages/hrms/AttendanceManagement";
+import LeaveManagement from "./pages/hrms/LeaveManagement";
+import SalaryManagement from "./pages/hrms/SalaryManagement";
+import HRMSLayout from "./pages/hrms/HRMSLayout";
 
 function App() {
   return (
@@ -61,13 +66,22 @@ function App() {
 
             {/* HRMS Routes */}
             <Route path="/hrms/login" element={<HRMSLogin />} />
-            <Route path="/hrms" element={<ProtectedHRMSRoute><HRMSDashboard /></ProtectedHRMSRoute>} />
-            <Route path="/hrms/dashboard" element={<ProtectedHRMSRoute><HRMSDashboard /></ProtectedHRMSRoute>} />
-            <Route path="/hrms/roles" element={<ProtectedHRMSRoute requiredPermission="settings.manage"><HRMSRoleManagement /></ProtectedHRMSRoute>} />
-            <Route path="/hrms/employees" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeList /></ProtectedHRMSRoute>} />
-            <Route path="/hrms/employees/new" element={<ProtectedHRMSRoute requiredPermission="employees.create"><EmployeeForm /></ProtectedHRMSRoute>} />
-            <Route path="/hrms/employees/:id" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeProfile /></ProtectedHRMSRoute>} />
-            <Route path="/hrms/employees/:id/edit" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeForm /></ProtectedHRMSRoute>} />
+            <Route path="/hrms" element={<ProtectedHRMSRoute><HRMSLayout /></ProtectedHRMSRoute>}>
+              <Route index element={<HRMSDashboard />} />
+              <Route path="dashboard" element={<HRMSDashboard />} />
+              <Route path="roles" element={<ProtectedHRMSRoute requiredPermission="settings.manage"><HRMSRoleManagement /></ProtectedHRMSRoute>} />
+              <Route path="organization" element={<ProtectedHRMSRoute requiredPermission="organization.view"><OrganizationManagement /></ProtectedHRMSRoute>} />
+              <Route path="attendance" element={<ProtectedHRMSRoute requiredPermission="attendance.view"><AttendanceManagement /></ProtectedHRMSRoute>} />
+              <Route path="leave" element={<ProtectedHRMSRoute requiredPermission="leave.view"><LeaveManagement /></ProtectedHRMSRoute>} />
+              <Route path="leave/apply" element={<ProtectedHRMSRoute requiredPermission="leave.apply"><LeaveManagement /></ProtectedHRMSRoute>} />
+              <Route path="leave/balance" element={<ProtectedHRMSRoute requiredPermission="leave.view"><LeaveManagement /></ProtectedHRMSRoute>} />
+              <Route path="leave/calendar" element={<ProtectedHRMSRoute requiredPermission="leave.view"><LeaveManagement /></ProtectedHRMSRoute>} />
+              <Route path="salary" element={<ProtectedHRMSRoute requiredPermission="hrms.access"><SalaryManagement /></ProtectedHRMSRoute>} />
+              <Route path="employees" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeList /></ProtectedHRMSRoute>} />
+              <Route path="employees/new" element={<ProtectedHRMSRoute requiredPermission="employees.create"><EmployeeForm /></ProtectedHRMSRoute>} />
+              <Route path="employees/:id" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeProfile /></ProtectedHRMSRoute>} />
+              <Route path="employees/:id/edit" element={<ProtectedHRMSRoute requiredPermission="employees.view"><EmployeeForm /></ProtectedHRMSRoute>} />
+            </Route>
             
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

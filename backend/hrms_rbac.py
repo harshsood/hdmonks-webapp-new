@@ -7,6 +7,8 @@ from fastapi import Depends, HTTPException
 
 PERMISSION_DESCRIPTIONS = {
     "hrms.access": "Access the HRMS application",
+    "organization.view": "View HRMS organization hierarchy",
+    "organization.manage": "Manage HRMS organization hierarchy",
     "employees.view": "View employee records",
     "employees.create": "Create employee records",
     "employees.update": "Update employee records",
@@ -22,6 +24,8 @@ PERMISSION_DESCRIPTIONS = {
     "leave.apply": "Apply for leave",
     "leave.cancel": "Cancel leave requests",
     "leave.approve": "Approve leave requests",
+    "leave.manage": "Manage leave types, policies, balances, and holidays",
+    "leave.override": "Override leave workflow decisions",
     "payroll.view": "View payroll records",
     "payroll.create": "Create payroll runs",
     "payroll.calculate": "Calculate payroll",
@@ -81,9 +85,9 @@ ROLE_DEFINITIONS = {
         "name": "HR Admin",
         "description": "Manage employee HR operations without payroll salary administration",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "employees.create", "employees.update", "employees.delete", "employees.export",
+            "hrms.access", "organization.view", "organization.manage", "employees.view", "employees.create", "employees.update", "employees.delete", "employees.export",
             "departments.view", "departments.manage", "attendance.view", "attendance.manage", "attendance.regularize", "attendance.approve",
-            "leave.view", "leave.apply", "leave.cancel", "leave.approve", "performance.view", "performance.manage", "performance.review",
+            "leave.view", "leave.apply", "leave.cancel", "leave.approve", "leave.manage", "leave.override", "performance.view", "performance.manage", "performance.review",
             "recruitment.view", "recruitment.manage", "onboarding.view", "onboarding.manage", "training.view", "training.manage",
             "assets.view", "assets.manage", "documents.view", "documents.upload", "documents.manage", "helpdesk.view", "helpdesk.create",
             "helpdesk.assign", "helpdesk.resolve", "reports.view", "reports.export", "analytics.view", "settings.view", "audit_logs.view",
@@ -94,7 +98,7 @@ ROLE_DEFINITIONS = {
         "name": "Payroll Admin",
         "description": "Manage payroll and salary operations",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "departments.view", "attendance.view", "leave.view", "payroll.view", "payroll.create",
+            "hrms.access", "organization.view", "employees.view", "departments.view", "attendance.view", "leave.view", "payroll.view", "payroll.create",
             "payroll.calculate", "payroll.process", "payroll.approve", "payroll.export", "salary.view", "salary.create", "salary.update",
             "payslip.view", "payslip.generate", "payslip.download", "expenses.view", "expenses.create", "expenses.approve",
             "reports.view", "reports.export", "settings.view", "audit_logs.view",
@@ -105,7 +109,7 @@ ROLE_DEFINITIONS = {
         "name": "Finance",
         "description": "View and approve financial payroll information",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "departments.view", "payroll.view", "payroll.export", "payroll.approve", "salary.view",
+            "hrms.access", "organization.view", "employees.view", "departments.view", "payroll.view", "payroll.export", "payroll.approve", "salary.view",
             "payslip.view", "payslip.download", "expenses.view", "expenses.approve", "reports.view", "reports.export", "settings.view",
         ),
         "system": True,
@@ -114,7 +118,7 @@ ROLE_DEFINITIONS = {
         "name": "Manager",
         "description": "Manage assigned team workflows",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "departments.view", "attendance.view", "attendance.approve", "leave.view", "leave.approve",
+            "hrms.access", "organization.view", "employees.view", "departments.view", "attendance.view", "attendance.manage", "attendance.regularize", "attendance.approve", "leave.view", "leave.apply", "leave.cancel", "leave.approve",
             "performance.view", "performance.review", "training.view", "assets.view", "documents.view", "helpdesk.view", "helpdesk.create",
             "reports.view",
         ),
@@ -124,7 +128,7 @@ ROLE_DEFINITIONS = {
         "name": "Employee",
         "description": "Access personal HRMS records and self-service workflows",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "attendance.view", "attendance.manage", "leave.view", "leave.apply", "leave.cancel",
+            "hrms.access", "organization.view", "employees.view", "attendance.view", "attendance.manage", "attendance.regularize", "leave.view", "leave.apply", "leave.cancel",
             "payslip.view", "payslip.download", "expenses.view", "expenses.create", "performance.view", "performance.review",
             "documents.view", "documents.upload", "helpdesk.view", "helpdesk.create", "assets.view",
         ),
@@ -134,7 +138,7 @@ ROLE_DEFINITIONS = {
         "name": "Recruiter",
         "description": "Manage recruitment and onboarding workflows",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "employees.create", "employees.update", "departments.view", "recruitment.view",
+            "hrms.access", "organization.view", "employees.view", "employees.create", "employees.update", "departments.view", "recruitment.view",
             "recruitment.manage", "onboarding.view", "onboarding.manage", "documents.view", "documents.upload", "reports.view",
         ),
         "system": True,
@@ -143,7 +147,7 @@ ROLE_DEFINITIONS = {
         "name": "HR Viewer",
         "description": "Read-only HR operational access",
         "permissions": _permissions(
-            "hrms.access", "employees.view", "departments.view", "attendance.view", "leave.view", "performance.view", "training.view",
+            "hrms.access", "organization.view", "employees.view", "departments.view", "attendance.view", "leave.view", "performance.view", "training.view",
             "assets.view", "documents.view", "helpdesk.view", "reports.view", "analytics.view", "audit_logs.view",
         ),
         "system": True,

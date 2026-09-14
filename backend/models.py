@@ -213,8 +213,10 @@ class EmployeeBase(BaseModel):
     date_of_joining: str
     employment_type: Literal["full_time", "part_time", "contract", "intern", "consultant"]
     department: Optional[str] = None
+    team_id: Optional[str] = None
     designation: Optional[str] = None
     manager_user_id: Optional[str] = None
+    manager_employee_id: Optional[str] = None
     branch: Optional[str] = None
     location: Optional[str] = None
     probation_period_days: Optional[int] = Field(default=None, ge=0, le=365)
@@ -247,8 +249,10 @@ class EmployeeUpdate(BaseModel):
     date_of_joining: Optional[str] = None
     employment_type: Optional[Literal["full_time", "part_time", "contract", "intern", "consultant"]] = None
     department: Optional[str] = None
+    team_id: Optional[str] = None
     designation: Optional[str] = None
     manager_user_id: Optional[str] = None
+    manager_employee_id: Optional[str] = None
     branch: Optional[str] = None
     location: Optional[str] = None
     probation_period_days: Optional[int] = Field(default=None, ge=0, le=365)
@@ -276,6 +280,155 @@ class EmployeeDocumentCreate(BaseModel):
 class EmployeeStatusUpdate(BaseModel):
     status: Literal["active", "inactive", "archived"]
     reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class OrganizationResource(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    code: Optional[str] = Field(default=None, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=500)
+    company_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    department_id: Optional[str] = None
+    manager_employee_id: Optional[str] = None
+    is_active: bool = True
+
+
+class OrganizationResourceUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=150)
+    code: Optional[str] = Field(default=None, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=500)
+    company_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    department_id: Optional[str] = None
+    manager_employee_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+ATTENDANCE_STATES = Literal[
+    "PRESENT", "ABSENT", "HALF_DAY", "LATE", "EARLY_EXIT", "ON_LEAVE",
+    "WFH", "HOLIDAY", "WEEKLY_OFF", "OVERTIME"
+]
+
+
+class AttendanceCheckRequest(BaseModel):
+    occurred_at: Optional[str] = None
+    source: Literal["web", "mobile", "biometric", "device", "import"] = "web"
+    device_id: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+class AttendanceCorrectionCreate(BaseModel):
+    attendance_date: str
+    requested_check_in: Optional[str] = None
+    requested_check_out: Optional[str] = None
+    requested_status: Optional[ATTENDANCE_STATES] = None
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class AttendanceCorrectionDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+    comment: Optional[str] = Field(default=None, max_length=1000)
+
+
+class AttendancePolicy(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    workday_hours: float = Field(default=8, gt=0, le=24)
+    late_grace_minutes: int = Field(default=15, ge=0, le=720)
+    half_day_hours: float = Field(default=4, ge=0, le=24)
+    overtime_after_hours: float = Field(default=8, gt=0, le=24)
+    is_active: bool = True
+
+
+class AttendanceManualUpdate(BaseModel):
+    status: Optional[ATTENDANCE_STATES] = None
+    check_in: Optional[str] = None
+    check_out: Optional[str] = None
+    break_duration_minutes: Optional[int] = Field(default=None, ge=0, le=1440)
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+LEAVE_TYPES = Literal["CASUAL", "SICK", "EARNED", "PRIVILEGE", "MATERNITY", "PATERNITY", "COMP_OFF", "UNPAID", "WFH"]
+
+
+class LeaveTypeCreate(BaseModel):
+    code: LEAVE_TYPES
+    name: str = Field(min_length=1, max_length=100)
+    annual_entitlement: float = Field(default=0, ge=0, le=366)
+    accrual_frequency: Literal["none", "monthly", "quarterly", "yearly"] = "yearly"
+    carry_forward_allowed: bool = False
+    carry_forward_limit: float = Field(default=0, ge=0, le=366)
+    encashment_allowed: bool = False
+    encashment_limit: float = Field(default=0, ge=0, le=366)
+    allow_half_day: bool = True
+    allow_hourly: bool = False
+    requires_hr_approval: bool = False
+    is_active: bool = True
+
+
+class LeaveApplicationCreate(BaseModel):
+    leave_type: LEAVE_TYPES
+    start_date: str
+    end_date: str
+    duration: Literal["full_day", "half_day", "hours"] = "full_day"
+    hours: Optional[float] = Field(default=None, gt=0, le=24)
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+class LeaveDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+    comment: Optional[str] = Field(default=None, max_length=1000)
+
+
+class LeaveTypeUpdate(LeaveTypeCreate):
+    pass
+
+
+class HolidayCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    holiday_date: str
+    is_optional: bool = False
+    is_active: bool = True
+
+
+EARNING_TYPES = Literal[
+    "BASIC", "HRA", "CONVEYANCE", "SPECIAL_ALLOWANCE", "MEDICAL_ALLOWANCE",
+    "OTHER_ALLOWANCE", "BONUS", "INCENTIVE", "OVERTIME"
+]
+DEDUCTION_TYPES = Literal["PF", "ESI", "PROFESSIONAL_TAX", "TDS", "LOAN", "ADVANCE", "OTHER_DEDUCTION"]
+
+
+class SalaryComponent(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    component_type: Literal["earning", "deduction"]
+    code: str = Field(min_length=1, max_length=50)
+    amount: float = Field(default=0, ge=0)
+    percentage: Optional[float] = Field(default=None, ge=0, le=100)
+    calculation_base: Optional[str] = None
+    is_variable: bool = False
+
+
+class SalaryTemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=500)
+    earnings: List[SalaryComponent] = []
+    deductions: List[SalaryComponent] = []
+    is_active: bool = True
+
+
+class SalaryAssignmentCreate(BaseModel):
+    template_id: Optional[str] = None
+    effective_date: str
+    ctc: float = Field(ge=0)
+    gross_salary: float = Field(ge=0)
+    net_salary: float = Field(ge=0)
+    earnings: List[SalaryComponent] = []
+    deductions: List[SalaryComponent] = []
+    change_type: Literal["initial", "revision", "increment", "promotion"] = "initial"
+    change_reason: Optional[str] = Field(default=None, max_length=1000)
+
+
+class SalaryRevisionCreate(SalaryAssignmentCreate):
+    change_type: Literal["revision", "increment", "promotion"] = "revision"
 
 
 class CompanyDocumentUpdate(BaseModel):

@@ -23,6 +23,10 @@ from partner_routes import partner_router
 from user_routes import user_router
 from hrms_routes import hrms_router
 from hrms_employee_routes import employee_router
+from hrms_organization_routes import organization_router
+from hrms_attendance_routes import attendance_router
+from hrms_leave_routes import leave_router
+from hrms_salary_routes import salary_router
 
 def serialize_mongo(document):
     if isinstance(document, list):
@@ -674,6 +678,10 @@ app.include_router(partner_router)
 app.include_router(user_router)
 app.include_router(hrms_router)
 app.include_router(employee_router)
+app.include_router(organization_router)
+app.include_router(attendance_router)
+app.include_router(leave_router)
+app.include_router(salary_router)
 
 
 @app.on_event("startup")

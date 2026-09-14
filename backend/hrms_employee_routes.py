@@ -194,6 +194,9 @@ async def export_employees(
 @employee_router.post("")
 async def create_employee(payload: EmployeeCreate, session: dict = Depends(require_hrms_permission("employees.create"))):
     data = payload.model_dump(exclude_none=True)
+    if data.get("manager_employee_id"):
+        if not await database.get_hrms_employee(data["manager_employee_id"]):
+            raise HTTPException(status_code=400, detail="Manager employee does not exist")
     sensitive_fields = SENSITIVE_FIELDS.intersection(data)
     if sensitive_fields and not has_permission(session, "salary.update"):
         raise HTTPException(status_code=403, detail="Salary permission is required for bank and tax information")
@@ -218,6 +221,12 @@ async def get_employee(employee_id: str, session: dict = Depends(require_hrms_pe
 async def update_employee(employee_id: str, payload: EmployeeUpdate, session: dict = Depends(require_hrms_permission("employees.view"))):
     existing = await get_scoped_employee(employee_id, session, sensitive=False)
     data = payload.model_dump(exclude_none=True)
+    if "manager_employee_id" in data:
+        manager_id = data["manager_employee_id"]
+        if manager_id and not await database.get_hrms_employee(manager_id):
+            raise HTTPException(status_code=400, detail="Manager employee does not exist")
+        if manager_id == employee_id or (manager_id and employee_id in await database.get_employee_manager_chain(manager_id)):
+            raise HTTPException(status_code=400, detail="Circular manager relationship is not allowed")
     if not has_permission(session, "employees.update"):
         self_service_fields = {"profile_photo_url", "personal_email", "phone", "address", "emergency_contact"}
         if existing.get("user_id") != session["user_id"] or not set(data).issubset(self_service_fields):
