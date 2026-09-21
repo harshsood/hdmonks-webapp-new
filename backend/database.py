@@ -413,6 +413,23 @@ class Database:
             await self.db.hrms_holidays.create_index("holiday_date")
             await self.db.hrms_salary_templates.create_index("name", unique=True)
             await self.db.hrms_salary_assignments.create_index([("employee_id", 1), ("effective_date", -1)])
+            default_leave_types = [
+                {"code": "CASUAL", "name": "Casual Leave", "annual_entitlement": 12, "accrual_frequency": "monthly", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+                {"code": "SICK", "name": "Sick Leave", "annual_entitlement": 12, "accrual_frequency": "monthly", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+                {"code": "EARNED", "name": "Earned Leave", "annual_entitlement": 15, "accrual_frequency": "monthly", "carry_forward_allowed": True, "carry_forward_limit": 30, "encashment_allowed": True, "encashment_limit": 15, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+                {"code": "PRIVILEGE", "name": "Privilege Leave", "annual_entitlement": 15, "accrual_frequency": "yearly", "carry_forward_allowed": True, "carry_forward_limit": 30, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+                {"code": "MATERNITY", "name": "Maternity Leave", "annual_entitlement": 182, "accrual_frequency": "none", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": False, "allow_hourly": False, "requires_hr_approval": True, "is_active": True},
+                {"code": "PATERNITY", "name": "Paternity Leave", "annual_entitlement": 15, "accrual_frequency": "none", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": False, "allow_hourly": False, "requires_hr_approval": True, "is_active": True},
+                {"code": "COMP_OFF", "name": "Compensatory Off", "annual_entitlement": 0, "accrual_frequency": "none", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+                {"code": "UNPAID", "name": "Unpaid Leave", "annual_entitlement": 0, "accrual_frequency": "none", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+                {"code": "WFH", "name": "Work From Home", "annual_entitlement": 12, "accrual_frequency": "monthly", "carry_forward_allowed": False, "carry_forward_limit": 0, "encashment_allowed": False, "encashment_limit": 0, "allow_half_day": True, "allow_hourly": False, "requires_hr_approval": False, "is_active": True},
+            ]
+            for leave_type in default_leave_types:
+                await self.db.hrms_leave_types.update_one(
+                    {"code": leave_type["code"]},
+                    {"$setOnInsert": {**leave_type, "created_at": datetime.utcnow().isoformat(), "updated_at": datetime.utcnow().isoformat()}},
+                    upsert=True,
+                )
             self._hrms_catalog_ready = True
 
     async def get_user_hrms_authorization(self, user_id: str) -> Dict[str, Any]:
