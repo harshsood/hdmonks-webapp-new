@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, ArrowLeft, Edit3, FileText, RotateCcw, ShieldAlert, Upload } from 'lucide-react';
+import { Archive, ArrowLeft, Edit3, FileText, KeyRound, RotateCcw, ShieldAlert, Upload } from 'lucide-react';
 import axios from 'axios';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useHRMSAuth } from '../../contexts/HRMSAuthContext';
@@ -26,6 +26,8 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [accountForm, setAccountForm] = useState({ username: '', password: '' });
+  const [accountSaving, setAccountSaving] = useState(false);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -52,6 +54,23 @@ const EmployeeProfile = () => {
 
   const isOwnRecord = employee?.user_id === user?.id;
   const canEdit = hasPermission('employees.update') || isOwnRecord;
+
+  const createAccount = async (event) => {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    setAccountSaving(true);
+    try {
+      await axios.post(`${API}/${id}/account`, accountForm, { headers });
+      setAccountForm({ username: '', password: '' });
+      setMessage('Login access created. The employee can now sign in at /hrms/login.');
+      await loadProfile();
+    } catch (accountError) {
+      setError(accountError.response?.data?.detail || 'Unable to create login access.');
+    } finally {
+      setAccountSaving(false);
+    }
+  };
 
   const changeStatus = async (status) => {
     setError('');
@@ -105,6 +124,8 @@ const EmployeeProfile = () => {
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold text-gray-900">Personal Information</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2"><Row label="Employee ID" value={employee.employee_code} /><Row label="Date of birth" value={employee.date_of_birth} /><Row label="Gender" value={employee.gender} /><Row label="Personal email" value={employee.personal_email} /><Row label="Work email" value={employee.work_email} /><Row label="Phone" value={employee.phone} /><Row label="Address" value={employee.address?.line} /><Row label="Emergency contact" value={employee.emergency_contact?.name} /></dl></section>
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold text-gray-900">Employment Information</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2"><Row label="Date of joining" value={employee.date_of_joining} /><Row label="Employment type" value={employee.employment_type} /><Row label="Department" value={employee.department} /><Row label="Designation" value={employee.designation} /><Row label="Manager" value={employee.manager_user_id} /><Row label="Branch" value={employee.branch} /><Row label="Location" value={employee.location} /><Row label="Probation" value={employee.probation_period_days ? `${employee.probation_period_days} days` : '-'} /><Row label="Confirmation date" value={employee.confirmation_date} /><Row label="Notice period" value={employee.notice_period_days ? `${employee.notice_period_days} days` : '-'} /><Row label="Status" value={employee.employment_status} /></dl></section>
       </div>
+
+      {hasPermission('employees.update') && <section className="rounded-xl border border-orange-200 bg-orange-50 p-6"><div className="flex items-center gap-3"><KeyRound className="h-5 w-5 text-orange-600" /><div><h2 className="text-xl font-semibold text-gray-900">Login access</h2><p className="mt-1 text-sm text-gray-600">{employee.user_id ? 'This employee has an HRMS account with the employee role.' : 'Create credentials so this employee can access the HRMS dashboard.'}</p></div></div>{employee.user_id ? <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">Access is active and linked to this employee record.</p> : <form onSubmit={createAccount} className="mt-5 grid gap-4 md:grid-cols-3"><label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700">Username</span><input value={accountForm.username} onChange={(event) => setAccountForm((current) => ({ ...current, username: event.target.value }))} autoComplete="username" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm" required minLength={3} /></label><label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700">Temporary password</span><input type="password" value={accountForm.password} onChange={(event) => setAccountForm((current) => ({ ...current, password: event.target.value }))} autoComplete="new-password" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm" required minLength={8} /></label><div className="flex items-end"><button type="submit" disabled={accountSaving} className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50">{accountSaving ? 'Creating access...' : 'Create login access'}</button></div></form>}</section>}
 
       {(hasPermission('salary.view') || employee.bank_name) && <section className="rounded-xl border border-red-200 bg-red-50 p-6"><div className="flex items-center gap-2 text-red-800"><ShieldAlert className="h-5 w-5" /><h2 className="text-xl font-semibold">Bank / Payroll Information</h2></div>{hasPermission('salary.view') ? <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-5"><Row label="Bank name" value={employee.bank_name} /><Row label="Account number" value={employee.bank_account_number ? `••••${employee.bank_account_number.slice(-4)}` : '-'} /><Row label="IFSC" value={employee.bank_ifsc} /><Row label="Payment method" value={employee.payment_method} /><Row label="Tax identifier" value={employee.tax_information?.tax_identifier} /></dl> : <p className="mt-3 text-sm text-red-700">Financial details are restricted to authorized payroll and finance roles.</p>}</section>}
 

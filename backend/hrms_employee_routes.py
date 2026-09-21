@@ -13,7 +13,8 @@ from pymongo.errors import DuplicateKeyError
 
 from database import database
 from hrms_rbac import can_access_employee, has_permission, require_hrms_permission
-from models import EmployeeCreate, EmployeeDocumentCreate, EmployeeStatusUpdate, EmployeeUpdate
+from models import EmployeeAccountCreate, EmployeeCreate, EmployeeDocumentCreate, EmployeeStatusUpdate, EmployeeUpdate
+from user_auth import hash_password
 
 employee_router = APIRouter(prefix="/api/hrms/employees", tags=["HRMS Employees"])
 
@@ -220,6 +221,54 @@ async def create_employee(payload: EmployeeCreate, session: dict = Depends(requi
 async def get_employee(employee_id: str, session: dict = Depends(require_hrms_permission("employees.view"))):
     employee = await get_scoped_employee(employee_id, session, sensitive=False)
     return {"success": True, "data": project_employee(employee, session)}
+
+
+@employee_router.post("/{employee_id}/account")
+async def create_employee_account(
+    employee_id: str,
+    payload: EmployeeAccountCreate,
+    session: dict = Depends(require_hrms_permission("employees.update")),
+):
+    employee = await get_scoped_employee(employee_id, session, sensitive=False)
+    if employee.get("user_id"):
+        raise HTTPException(status_code=409, detail="This employee already has login access")
+
+    email = (employee.get("work_email") or employee.get("personal_email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Add a work or personal email before creating login access")
+    if await database.get_user_by_email(email):
+        raise HTTPException(status_code=409, detail="An account with this email already exists")
+    if await database.get_user_by_identifier(payload.username):
+        raise HTTPException(status_code=409, detail="This username is already in use")
+
+    user_id = str(uuid.uuid4())
+    timestamp = now_iso()
+    try:
+        await database.create_user({
+            "id": user_id,
+            "full_name": f"{employee['first_name']} {employee['last_name']}".strip(),
+            "email": email,
+            "username": payload.username.strip().lower(),
+            "password_hash": hash_password(payload.password),
+            "permissions": [],
+            "created_at": timestamp,
+        })
+        await database.assign_hrms_roles(user_id, ["employee"])
+        updated = await database.update_hrms_employee(employee_id, {"user_id": user_id, "updated_at": timestamp})
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="The email, username, or employee link is already in use")
+
+    await audit_employee(session, employee_id, "account_created", ["user_id"])
+    return {
+        "success": True,
+        "data": {
+            "user_id": user_id,
+            "username": payload.username.strip().lower(),
+            "email": email,
+            "role": "employee",
+            "employee": project_employee(updated, session),
+        },
+    }
 
 
 @employee_router.put("/{employee_id}")
