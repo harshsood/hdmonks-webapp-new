@@ -199,7 +199,7 @@ class HRMSLogin(BaseModel):
 
 
 class EmployeeAccountCreate(BaseModel):
-    username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9._-]+$")
+    username: str = Field(min_length=3, max_length=100, pattern=r"^[a-zA-Z0-9._@+-]+$")
     password: str = Field(min_length=8, max_length=128)
 
 

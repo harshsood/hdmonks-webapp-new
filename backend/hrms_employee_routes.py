@@ -233,12 +233,13 @@ async def create_employee_account(
     if employee.get("user_id"):
         raise HTTPException(status_code=409, detail="This employee already has login access")
 
+    username = payload.username.strip().lower()
     email = (employee.get("work_email") or employee.get("personal_email") or "").strip().lower()
     if not email:
         raise HTTPException(status_code=400, detail="Add a work or personal email before creating login access")
     if await database.get_user_by_email(email):
         raise HTTPException(status_code=409, detail="An account with this email already exists")
-    if await database.get_user_by_identifier(payload.username):
+    if await database.get_user_by_identifier(username):
         raise HTTPException(status_code=409, detail="This username is already in use")
 
     user_id = str(uuid.uuid4())
@@ -248,7 +249,7 @@ async def create_employee_account(
             "id": user_id,
             "full_name": f"{employee['first_name']} {employee['last_name']}".strip(),
             "email": email,
-            "username": payload.username.strip().lower(),
+            "username": username,
             "password_hash": hash_password(payload.password),
             "permissions": [],
             "created_at": timestamp,
@@ -263,7 +264,7 @@ async def create_employee_account(
         "success": True,
         "data": {
             "user_id": user_id,
-            "username": payload.username.strip().lower(),
+            "username": username,
             "email": email,
             "role": "employee",
             "employee": project_employee(updated, session),
