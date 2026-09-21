@@ -39,6 +39,8 @@ The `vercel.json` file at the root includes:
 
 Make sure the following environment variables are set for the backend service on Render:
 
+- `MONGO_URL`: the MongoDB Atlas connection string for the production cluster.
+- `DB_NAME`: the production database name, normally `hdmonks`.
 - `REACT_APP_BACKEND_URL` is set in Vercel (frontend) to point to the backend.
 - `ALLOWED_ORIGINS` (important): a comma-separated list of allowed origins for CORS, e.g.
 
@@ -47,6 +49,14 @@ ALLOWED_ORIGINS=https://www.hdmonks.com,https://hdmonks.com
 ```
 
 Set `ALLOWED_ORIGINS` in your Render dashboard under the service's environment variables and redeploy the backend so the CORS header is returned correctly to the frontend.
+
+After deployment, verify the database-backed health check:
+
+```bash
+curl https://hd-monks-web-app.onrender.com/api/health
+```
+
+The response must include `"database":"connected"`. A `503` response means the Render service is missing `MONGO_URL`, cannot reach MongoDB Atlas, or is using an Atlas network access list that does not allow Render.
 
 ### 🌐 Live URLs
 - **Frontend Home**: https://hd-monks-web-app-git-copilot-vscode-f0e44d-harshsoods-projects.vercel.app

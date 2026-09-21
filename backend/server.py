@@ -70,8 +70,13 @@ async def root():
 
 @api_router.get("/health")
 async def health_check():
-    """Simple health endpoint to verify server is up without DB access"""
-    return {"success": True, "message": "ok"}
+    """Verify both the API process and its database connection."""
+    try:
+        await database.client.admin.command('ping')
+        return {"success": True, "message": "ok", "database": "connected"}
+    except Exception as e:
+        logger.exception("Database health check failed")
+        raise HTTPException(status_code=503, detail="Database connection is unavailable") from e
 
 
 @api_router.get("/debug/origin")
@@ -615,7 +620,7 @@ _allowed_origins = os.environ.get("ALLOWED_ORIGINS")
 if _allowed_origins:
     allow_origins = [o.strip() for o in _allowed_origins.split(",") if o.strip()]
 else:
-    # default to known frontend domains and localhost for testing
+    # Include Vercel preview deployments so the deployed frontend can call the API.
     allow_origins = [
         "https://www.hdmonks.com",
         "https://hdmonks.com",
@@ -640,8 +645,8 @@ async def log_origin(request: Request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    #allow_origins=["*"],
     allow_origins=allow_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
