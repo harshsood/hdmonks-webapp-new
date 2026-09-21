@@ -194,6 +194,11 @@ async def export_employees(
 @employee_router.post("")
 async def create_employee(payload: EmployeeCreate, session: dict = Depends(require_hrms_permission("employees.create"))):
     data = payload.model_dump(exclude_none=True)
+    for field in ("employee_code", "first_name", "last_name", "manager_user_id", "manager_employee_id"):
+        if isinstance(data.get(field), str):
+            data[field] = data[field].strip()
+            if not data[field]:
+                data.pop(field)
     if data.get("manager_employee_id"):
         if not await database.get_hrms_employee(data["manager_employee_id"]):
             raise HTTPException(status_code=400, detail="Manager employee does not exist")

@@ -56,6 +56,9 @@ const EmployeeForm = () => {
     setSaving(true);
     try {
       const payload = { ...form };
+      Object.keys(payload).forEach((field) => {
+        if (typeof payload[field] === 'string') payload[field] = payload[field].trim();
+      });
       ['probation_period_days', 'notice_period_days'].forEach((field) => {
         if (payload[field] === '') delete payload[field];
         else if (payload[field] !== undefined) payload[field] = Number(payload[field]);
@@ -63,6 +66,18 @@ const EmployeeForm = () => {
       Object.keys(payload).forEach((field) => {
         if (payload[field] === '') delete payload[field];
       });
+      ['address', 'emergency_contact', 'tax_information'].forEach((field) => {
+        if (payload[field] && typeof payload[field] === 'object') {
+          Object.keys(payload[field]).forEach((key) => {
+            if (typeof payload[field][key] === 'string') payload[field][key] = payload[field][key].trim();
+            if (payload[field][key] === '') delete payload[field][key];
+          });
+          if (!Object.keys(payload[field]).length) delete payload[field];
+        }
+      });
+      if (!payload.bank_name && !payload.bank_account_number && !payload.bank_ifsc && !payload.tax_information) {
+        delete payload.payment_method;
+      }
       if (!hasPermission('employees.update')) {
         const selfServiceFields = ['profile_photo_url', 'personal_email', 'phone', 'address', 'emergency_contact'];
         Object.keys(payload).forEach((field) => {
