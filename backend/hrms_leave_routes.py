@@ -95,6 +95,8 @@ async def create_leave_type(payload: LeaveTypeCreate, session: dict = Depends(re
 
 @leave_router.get("/balance")
 async def leave_balance(session: dict = Depends(require_hrms_permission("leave.view"))):
+    if set(session.get("roles", [])) & {"super_admin", "hr_admin", "hr_viewer"}:
+        return {"success": True, "data": []}
     employee = await own_employee(session)
     balances = await database.list_hrms_leave_balances(employee["id"])
     return {"success": True, "data": balances}

@@ -27,13 +27,16 @@ const LeaveManagement = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [applicationResponse, balanceResponse, typesResponse, calendarResponse] = await Promise.all([
+      const responses = await Promise.allSettled([
         axios.get(API, { headers }), axios.get(`${API}/balance`, { headers }), axios.get(`${API}/types`, { headers }), axios.get(`${API}/calendar`, { headers }),
       ]);
-      setApplications(applicationResponse.data.data || []);
-      setBalances(balanceResponse.data.data || []);
-      setLeaveTypes(typesResponse.data.data || []);
-      setHolidays(calendarResponse.data.data?.holidays || []);
+      const [applicationResponse, balanceResponse, typesResponse, calendarResponse] = responses;
+      if (applicationResponse.status === 'fulfilled') setApplications(applicationResponse.value.data.data || []);
+      if (balanceResponse.status === 'fulfilled') setBalances(balanceResponse.value.data.data || []);
+      if (typesResponse.status === 'fulfilled') setLeaveTypes(typesResponse.value.data.data || []);
+      if (calendarResponse.status === 'fulfilled') setHolidays(calendarResponse.value.data.data?.holidays || []);
+      const failedResponse = responses.find((response) => response.status === 'rejected');
+      if (failedResponse) setError(failedResponse.reason?.response?.data?.detail || 'Some leave data could not be loaded.');
     } catch (loadError) { setError(loadError.response?.data?.detail || 'Unable to load leave data.'); } finally { setLoading(false); }
   }, [headers]);
 
