@@ -1,35 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useHRMSAuth } from '../../contexts/HRMSAuthContext';
 
 const HRMSDashboard = () => {
-  const { user, token, logout, hasPermission } = useHRMSAuth();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
-
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/user/hrms/dashboard`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAuthorized(Boolean(response.data.success));
-      } catch (error) {
-        await logout();
-        navigate('/hrms/login', { replace: true, state: { message: 'Your HRMS session has expired or access was revoked.' } });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (token) loadDashboard();
-  }, [logout, navigate, token]);
-
-  if (loading || !authorized) {
-    return <div className="flex min-h-screen items-center justify-center text-gray-500">Loading HRMS...</div>;
-  }
+  const { user, hasPermission } = useHRMSAuth();
 
   return (
     <section className="space-y-6">

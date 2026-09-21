@@ -6,7 +6,7 @@ import { useHRMSAuth } from '../../contexts/HRMSAuthContext';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api/hrms`;
 
 const HRMSRoleManagement = () => {
-  const { token } = useHRMSAuth();
+  const { token, user, refreshAuthorization } = useHRMSAuth();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -66,6 +66,7 @@ const HRMSRoleManagement = () => {
         ? { ...user, roles: authorization.roles, permissions: authorization.permissions }
         : user));
       setSelectedUser((current) => ({ ...current, roles: authorization.roles, permissions: authorization.permissions }));
+      if (selectedUser.id === user?.id) await refreshAuthorization();
       setMessage('HRMS roles updated successfully.');
     } catch (saveError) {
       setError(saveError.response?.data?.detail || 'Unable to update HRMS roles.');

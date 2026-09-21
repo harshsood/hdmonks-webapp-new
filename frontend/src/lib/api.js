@@ -18,7 +18,9 @@ apiClient.interceptors.request.use(
       ? localStorage.getItem('admin_token')
       : config.url?.includes('/partner/')
         ? localStorage.getItem('partner_token')
-        : localStorage.getItem('user_token');
+        : config.url?.includes('/hrms/')
+          ? localStorage.getItem('hrms_token')
+          : localStorage.getItem('user_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,9 +36,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     // Handle authentication errors
-    if (error.response?.status === 401 && error.config?.url?.includes('/admin/')) {
-      localStorage.removeItem('admin_token');
-      window.location.href = '/admin/login';
+    if (error.response?.status === 401) {
+      const url = error.config?.url || '';
+      const loginPath = url.includes('/admin/') ? '/admin/login' : url.includes('/partner/') ? '/partner/login' : url.includes('/hrms/') ? '/hrms/login' : null;
+      const tokenKey = url.includes('/admin/') ? 'admin_token' : url.includes('/partner/') ? 'partner_token' : url.includes('/hrms/') ? 'hrms_token' : null;
+      if (loginPath && tokenKey) {
+        localStorage.removeItem(tokenKey);
+        window.location.href = loginPath;
+      }
     }
     return Promise.reject(error);
   }

@@ -56,6 +56,22 @@ export const HRMSAuthProvider = ({ children }) => {
     }
   }, [logout, token]);
 
+  const refreshAuthorization = useCallback(async () => {
+    if (!token) return false;
+    try {
+      const response = await axios.get(`${API}/verify`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.data.success) return false;
+      setUser(response.data.user);
+      setRoles(response.data.roles || []);
+      setPermissions(response.data.permissions || []);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }, [token]);
+
   useEffect(() => {
     if (token) verifyToken();
     else setLoading(false);
@@ -88,7 +104,7 @@ export const HRMSAuthProvider = ({ children }) => {
   const hasAnyPermission = (requiredPermissions) => requiredPermissions.some(hasPermission);
 
   return (
-    <HRMSAuthContext.Provider value={{ user, roles, permissions, token, loading, login, logout, hasPermission, hasAnyPermission, isAuthenticated: !!user }}>
+    <HRMSAuthContext.Provider value={{ user, roles, permissions, token, loading, login, logout, refreshAuthorization, hasPermission, hasAnyPermission, isAuthenticated: !!user }}>
       {children}
     </HRMSAuthContext.Provider>
   );
