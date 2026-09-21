@@ -19,7 +19,7 @@ const Row = ({ label, value }) => <div><dt className="text-xs uppercase tracking
 const EmployeeProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, user, hasPermission } = useHRMSAuth();
+  const { token, user, hasPermission, refreshKey } = useHRMSAuth();
   const [employee, setEmployee] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [timeline, setTimeline] = useState([]);
@@ -48,7 +48,7 @@ const EmployeeProfile = () => {
 
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+  }, [loadProfile, refreshKey]);
 
   const isOwnRecord = employee?.user_id === user?.id;
   const canEdit = hasPermission('employees.update') || isOwnRecord;

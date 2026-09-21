@@ -1,5 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
@@ -12,6 +13,8 @@ class Database:
     def __init__(self):
         self.client = None
         self.db = None
+        self._hrms_catalog_ready = False
+        self._hrms_catalog_lock = asyncio.Lock()
     
     async def connect(self):
         """Initialize database connection"""
@@ -36,6 +39,7 @@ class Database:
         """Close database connection"""
         if self.client is not None:
             self.client.close()
+            self._hrms_catalog_ready = False
             logger.info("MongoDB connection closed")
     
     # Helper method to serialize datetime
@@ -366,25 +370,33 @@ class Database:
         if self.db is None:
             await self.connect()
 
-        for key, description in PERMISSION_DESCRIPTIONS.items():
-            module, action = key.split(".", 1)
-            await self.db.hrms_permissions.update_one(
-                {"key": key},
-                {"$set": {"key": key, "module": module, "action": action, "description": description}},
-                upsert=True,
-            )
+        if self._hrms_catalog_ready:
+            return
 
-        for key, definition in ROLE_DEFINITIONS.items():
-            await self.db.hrms_roles.update_one(
-                {"key": key},
-                {"$set": {"key": key, **definition}},
-                upsert=True,
-            )
-            await self.db.hrms_role_permissions.update_one(
-                {"role_key": key},
-                {"$set": {"role_key": key, "permission_keys": definition["permissions"]}},
-                upsert=True,
-            )
+        async with self._hrms_catalog_lock:
+            if self._hrms_catalog_ready:
+                return
+
+            for key, description in PERMISSION_DESCRIPTIONS.items():
+                module, action = key.split(".", 1)
+                await self.db.hrms_permissions.update_one(
+                    {"key": key},
+                    {"$set": {"key": key, "module": module, "action": action, "description": description}},
+                    upsert=True,
+                )
+
+            for key, definition in ROLE_DEFINITIONS.items():
+                await self.db.hrms_roles.update_one(
+                    {"key": key},
+                    {"$set": {"key": key, **definition}},
+                    upsert=True,
+                )
+                await self.db.hrms_role_permissions.update_one(
+                    {"role_key": key},
+                    {"$set": {"role_key": key, "permission_keys": definition["permissions"]}},
+                    upsert=True,
+                )
+
             await self.db.hrms_employees.create_index("employee_code", unique=True)
             await self.db.hrms_employees.create_index("user_id", unique=True, sparse=True)
             await self.db.hrms_employees.create_index([("employment_status", 1), ("department", 1), ("location", 1)])
@@ -401,6 +413,7 @@ class Database:
             await self.db.hrms_holidays.create_index("holiday_date")
             await self.db.hrms_salary_templates.create_index("name", unique=True)
             await self.db.hrms_salary_assignments.create_index([("employee_id", 1), ("effective_date", -1)])
+            self._hrms_catalog_ready = True
 
     async def get_user_hrms_authorization(self, user_id: str) -> Dict[str, Any]:
         """Resolve direct compatibility permissions plus mapped HRMS role permissions."""
@@ -585,8 +598,11 @@ class Database:
     async def upsert_hrms_policy(self, policy_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         if self.db is None:
             await self.connect()
-        await self.db.hrms_attendance_policies.update_one({"id": policy_id}, {"$set": self._serialize_datetime(data)}, upsert=True)
-        return await self.db.hrms_attendance_policies.find_one({"id": policy_id}, {"_id": 0})
+        existing = await self.db.hrms_attendance_policies.find_one({"name": data["name"]}, {"_id": 0})
+        query = {"id": existing["id"] if existing else policy_id}
+        data["id"] = query["id"]
+        await self.db.hrms_attendance_policies.update_one(query, {"$set": self._serialize_datetime(data)}, upsert=True)
+        return await self.db.hrms_attendance_policies.find_one(query, {"_id": 0})
 
     # ===== HRMS LEAVE =====
     async def list_hrms_leave_types(self, active_only: bool = False) -> List[Dict[str, Any]]:
@@ -634,17 +650,27 @@ class Database:
             await self.connect()
         session = await self.client.start_session()
         try:
-            async with session.start_transaction():
-                balance = await self.db.hrms_leave_balances.find_one(balance_query, session=session)
+            async def save_changes(transaction_session=None):
+                options = {"session": transaction_session} if transaction_session else {}
+                balance = await self.db.hrms_leave_balances.find_one(balance_query, **options)
                 if balance and balance.get("available", 0) < days and not balance.get("allow_overdraft", False):
                     raise ValueError("Insufficient leave balance")
                 if not balance:
                     raise ValueError("Leave balance is not configured")
-                await self.db.hrms_leave_balances.update_one(balance_query, {"$inc": {"reserved": days, "available": -days}}, session=session)
-                await self.db.hrms_leave_applications.insert_one(self._serialize_datetime(application), session=session)
+                await self.db.hrms_leave_balances.update_one(balance_query, {"$inc": {"reserved": days, "available": -days}}, **options)
+                await self.db.hrms_leave_applications.insert_one(self._serialize_datetime(application), **options)
                 await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({
                     "id": str(uuid.uuid4()), "employee_id": application["employee_id"], "leave_type": application["leave_type"], "application_id": application["id"], "transaction_type": "reserved", "amount": days, "created_at": datetime.utcnow().isoformat()
-                }), session=session)
+                }), **options)
+            try:
+                async with session.start_transaction():
+                    await save_changes(session)
+            except ValueError:
+                raise
+            except Exception as error:
+                if "transaction" not in str(error).lower() and "replica set" not in str(error).lower():
+                    raise
+                await save_changes()
             return application
         finally:
             await session.end_session()
@@ -654,14 +680,25 @@ class Database:
             await self.connect()
         session = await self.client.start_session()
         try:
-            async with session.start_transaction():
-                await self.db.hrms_leave_applications.update_one({"id": application["id"]}, {"$set": self._serialize_datetime(decision_data)}, session=session)
+            balance_query = {"employee_id": application["employee_id"], "leave_type": application["leave_type"]}
+
+            async def save_changes(transaction_session=None):
+                options = {"session": transaction_session} if transaction_session else {}
+                await self.db.hrms_leave_applications.update_one({"id": application["id"]}, {"$set": self._serialize_datetime(decision_data)}, **options)
                 if restore_balance:
-                    await self.db.hrms_leave_balances.update_one({"employee_id": application["employee_id"], "leave_type": application["leave_type"]}, {"$inc": {"reserved": -application["days"], "available": application["days"]}}, session=session)
-                    await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({"id": str(uuid.uuid4()), "employee_id": application["employee_id"], "leave_type": application["leave_type"], "application_id": application["id"], "transaction_type": "restored", "amount": application["days"], "created_at": datetime.utcnow().isoformat()}), session=session)
+                    await self.db.hrms_leave_balances.update_one(balance_query, {"$inc": {"reserved": -application["days"], "available": application["days"]}}, **options)
+                    await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({"id": str(uuid.uuid4()), **balance_query, "application_id": application["id"], "transaction_type": "restored", "amount": application["days"], "created_at": datetime.utcnow().isoformat()}), **options)
                 if finalize_balance:
-                    await self.db.hrms_leave_balances.update_one({"employee_id": application["employee_id"], "leave_type": application["leave_type"]}, {"$inc": {"reserved": -application["days"], "used": application["days"]}}, session=session)
-                    await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({"id": str(uuid.uuid4()), "employee_id": application["employee_id"], "leave_type": application["leave_type"], "application_id": application["id"], "transaction_type": "used", "amount": application["days"], "created_at": datetime.utcnow().isoformat()}), session=session)
+                    await self.db.hrms_leave_balances.update_one(balance_query, {"$inc": {"reserved": -application["days"], "used": application["days"]}}, **options)
+                    await self.db.hrms_leave_transactions.insert_one(self._serialize_datetime({"id": str(uuid.uuid4()), **balance_query, "application_id": application["id"], "transaction_type": "used", "amount": application["days"], "created_at": datetime.utcnow().isoformat()}), **options)
+
+            try:
+                async with session.start_transaction():
+                    await save_changes(session)
+            except Exception as error:
+                if "transaction" not in str(error).lower() and "replica set" not in str(error).lower():
+                    raise
+                await save_changes()
             return await self.get_hrms_leave_application(application["id"])
         finally:
             await session.end_session()

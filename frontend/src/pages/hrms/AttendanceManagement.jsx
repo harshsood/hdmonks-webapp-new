@@ -9,7 +9,7 @@ const pad = (value) => String(value).padStart(2, '0');
 const monthBounds = () => { const now = new Date(); return { from: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}` }; };
 
 const AttendanceManagement = () => {
-  const { token, roles, hasPermission } = useHRMSAuth();
+  const { token, roles, hasPermission, refreshKey } = useHRMSAuth();
   const [records, setRecords] = useState([]);
   const [summary, setSummary] = useState({ counts: {}, total_hours: 0, days: 0 });
   const [corrections, setCorrections] = useState([]);
@@ -51,13 +51,13 @@ const AttendanceManagement = () => {
     }
   }, [filters, headers]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/hrms/employees?page_size=100`, { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => setEmployees(response.data.data || []))
       .catch(() => undefined);
-  }, [token]);
+  }, [token, refreshKey]);
 
   const check = async (path) => {
     try {

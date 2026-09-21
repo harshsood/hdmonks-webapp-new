@@ -11,7 +11,7 @@ const RESOURCES = [
 const emptyForm = { name: '', code: '', description: '', company_id: '', branch_id: '', department_id: '', manager_employee_id: '' };
 
 const OrganizationManagement = () => {
-  const { token, hasPermission } = useHRMSAuth();
+  const { token, hasPermission, refreshKey } = useHRMSAuth();
   const [activeResource, setActiveResource] = useState('companies');
   const [data, setData] = useState({});
   const [form, setForm] = useState(emptyForm);
@@ -32,7 +32,7 @@ const OrganizationManagement = () => {
     }
   }, [token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   const save = async (event) => {
     event.preventDefault();

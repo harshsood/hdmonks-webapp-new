@@ -9,7 +9,7 @@ const types = ['CASUAL', 'SICK', 'EARNED', 'PRIVILEGE', 'MATERNITY', 'PATERNITY'
 const blankApplication = { leave_type: 'CASUAL', start_date: '', end_date: '', duration: 'full_day', hours: '', reason: '' };
 
 const LeaveManagement = () => {
-  const { token, hasPermission } = useHRMSAuth();
+  const { token, hasPermission, refreshKey } = useHRMSAuth();
   const location = useLocation();
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
   const page = location.pathname.split('/').pop();
@@ -37,7 +37,7 @@ const LeaveManagement = () => {
     } catch (loadError) { setError(loadError.response?.data?.detail || 'Unable to load leave data.'); } finally { setLoading(false); }
   }, [headers]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   const apply = async (event) => {
     event.preventDefault();

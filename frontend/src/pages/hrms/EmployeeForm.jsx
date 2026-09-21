@@ -17,7 +17,7 @@ const Field = ({ label, name, value, onChange, type = 'text', required = false, 
 const EmployeeForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, hasPermission } = useHRMSAuth();
+  const { token, hasPermission, refreshKey } = useHRMSAuth();
   const isEdit = Boolean(id);
   const canEditSalary = hasPermission('salary.update');
   const [form, setForm] = useState(initialForm);
@@ -39,7 +39,7 @@ const EmployeeForm = () => {
     };
     loadEmployee();
     return undefined;
-  }, [id, isEdit, token]);
+  }, [id, isEdit, token, refreshKey]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

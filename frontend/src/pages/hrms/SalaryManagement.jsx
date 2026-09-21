@@ -9,7 +9,7 @@ const deductionCodes = ['PF', 'ESI', 'PROFESSIONAL_TAX', 'TDS', 'LOAN', 'ADVANCE
 const blankComponent = (componentType, code) => ({ name: code, component_type: componentType, code, amount: 0, percentage: null, calculation_base: null, is_variable: false });
 
 const SalaryManagement = () => {
-  const { token, roles, hasPermission, user } = useHRMSAuth();
+  const { token, roles, hasPermission, user, refreshKey } = useHRMSAuth();
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -53,7 +53,7 @@ const SalaryManagement = () => {
       } catch (loadError) { setError(loadError.response?.data?.detail || 'Unable to load salary workspace.'); }
     };
     load();
-  }, [headers, canAccessSalary, canViewAny, user]);
+  }, [headers, canAccessSalary, canViewAny, user, refreshKey]);
 
   useEffect(() => { if (selectedEmployee) loadSalary(selectedEmployee); }, [selectedEmployee, loadSalary]);
 

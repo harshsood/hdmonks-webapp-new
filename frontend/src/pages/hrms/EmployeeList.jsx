@@ -8,7 +8,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api/hrms/employees`;
 const emptyFilters = { search: '', department: '', designation: '', location: '', employment_status: '', employment_type: '', joining_date_from: '', joining_date_to: '' };
 
 const EmployeeList = () => {
-  const { token, hasPermission } = useHRMSAuth();
+  const { token, hasPermission, refreshKey } = useHRMSAuth();
   const [employees, setEmployees] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [options, setOptions] = useState({ departments: [], designations: [], locations: [] });
@@ -51,7 +51,7 @@ const EmployeeList = () => {
 
   useEffect(() => {
     loadEmployees(1);
-  }, [filters, sort, loadEmployees]);
+  }, [filters, sort, loadEmployees, refreshKey]);
 
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const resetFilters = () => setFilters(emptyFilters);

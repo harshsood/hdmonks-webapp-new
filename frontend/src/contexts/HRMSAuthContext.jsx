@@ -18,6 +18,7 @@ export const HRMSAuthProvider = ({ children }) => {
   const [permissions, setPermissions] = useState([]);
   const [token, setToken] = useState(localStorage.getItem(HRMS_TOKEN_KEY));
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const logout = useCallback(async () => {
     const currentToken = token;
@@ -77,6 +78,12 @@ export const HRMSAuthProvider = ({ children }) => {
     else setLoading(false);
   }, [token, verifyToken]);
 
+  useEffect(() => {
+    const refreshOnFocus = () => setRefreshKey((current) => current + 1);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, []);
+
   const login = async (identifier, password, rememberMe) => {
     try {
       const response = await axios.post(`${API}/login`, {
@@ -104,7 +111,7 @@ export const HRMSAuthProvider = ({ children }) => {
   const hasAnyPermission = (requiredPermissions) => requiredPermissions.some(hasPermission);
 
   return (
-    <HRMSAuthContext.Provider value={{ user, roles, permissions, token, loading, login, logout, refreshAuthorization, hasPermission, hasAnyPermission, isAuthenticated: !!user }}>
+    <HRMSAuthContext.Provider value={{ user, roles, permissions, token, loading, refreshKey, login, logout, refreshAuthorization, hasPermission, hasAnyPermission, isAuthenticated: !!user }}>
       {children}
     </HRMSAuthContext.Provider>
   );

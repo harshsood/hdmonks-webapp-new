@@ -6,7 +6,7 @@ import { useHRMSAuth } from '../../contexts/HRMSAuthContext';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api/hrms`;
 
 const HRMSRoleManagement = () => {
-  const { token, user, refreshAuthorization } = useHRMSAuth();
+  const { token, user, refreshAuthorization, refreshKey } = useHRMSAuth();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -38,7 +38,7 @@ const HRMSRoleManagement = () => {
       }
     };
     load();
-  }, [token]);
+  }, [token, refreshKey]);
 
   const chooseUser = (user) => {
     setSelectedUser(user);
